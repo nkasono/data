@@ -1,0 +1,64 @@
+---
+title: "Week2_MelbWalk"
+author: "N Kaso"
+date: "09/09/2020"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+
+# Week 2 Melbourne Walk Exercise
+
+### Read the data
+```{r read csv}
+walkers <- read_csv("~/Documents/data_science_decision_making/melb_walk.csv")
+```
+### Filter for State Library on 1st Jan 2019
+```{r filter state lib}
+state_lib <- filter(walkers, Date == "2019-01-01", Sensor == "State Library")
+state_lib
+```
+### Plot a bar chart
+```{r bar chart}
+state_lib_plot <- ggplot(state_lib, aes(x = Time, y = Count, fill = Count)) +
+                  geom_bar(stat = "Identity") +
+                  labs(x = "Hour of Day", y = "Count of Walkers", title = "State Lib Sensor 1st Jan 2019") +
+                  theme_dark()
+state_lib_plot
+```
+### Filter again for one sensor over all days
+```{r filter state lib again}
+state_lib <- filter(walkers, Sensor == "State Library")
+state_lib
+```
+
+### Plot a box-plot
+
+```{r box plot}
+state_lib_boxplot <- ggplot(state_lib, aes(x = Sensor, y = Count)) +
+                    geom_boxplot()
+state_lib_boxplot
+```
+
+```{r side by side box plot}
+state_lib_boxsbs <- ggplot(state_lib, aes(x = Time, y = Count, group = Time)) +
+                    geom_boxplot(outlier.alpha = 0) +
+                    xlab("Time of Day")
+state_lib_boxsbs
+```
+### Filter again for two sensors
+```{r side by side box plots two sensors}
+walkers_mc_sl <- filter(walkers, Sensor %in% c("Melbourne Central", "State Library"), !is.na(Count), Count < 5000)
+walkers_mc_sl
+
+state_lib_boxsbs2 <- ggplot(walkers_mc_sl, aes(x = Time, y = Count, group = Time)) +
+                    geom_boxplot(outlier.alpha = 0) +
+                    facet_grid(Sensor~.)
+state_lib_boxsbs2
+```
+
