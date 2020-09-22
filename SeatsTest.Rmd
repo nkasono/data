@@ -1,0 +1,110 @@
+---
+title: "N Kaso SkyTrax Seats **Draft**"
+author: "N Kaso"
+date: "21/09/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+```
+# Description
+
+### A scraped dataset from all user reviews on Skytrax (www.airlinequality.com). This set contains traveller ratings of the airline seat over a number of categories. 
+### TBC...
+
+# Questions
+
+### Which are the most frequently rated airlines?
+### How does the average rating distribution compares across the top ten most often rated?
+### How does overall rating vary between Boeing and Airbus?
+### Which aircraft models show the best rating performance?
+
+## Read the data
+```{r read csv}
+seats <- read_csv("https://raw.githubusercontent.com/quankiquanki/skytrax-reviews-dataset/master/data/seat.csv")
+glimpse(seats)
+```
+## Tidy and wrangle the data
+```{r tidy, wrangle and glimpse}
+airbus_mods <- c("A300", "A310-300","A319","A320","A321", "A320-200","A330","A330-200","A330-300","A340","A340-300","A340-500","A340-600","A380", "A380-800","A300-600", "A321/A320", "Airbus","AIRBIS")
+
+boeing_mods <- c("B737-900", "B767", "B767-300", "B777", "B777-200", "B777-200LR", "B777-200ER", "B777-300", "B777-300ER", "B777-300", "B757-200", "B747-300", "Boeing747", "B777-300ER", "B747-400", "B757", "B757-200","B777-300W", "Boeing")
+
+seats_tidy <- seats %>% 
+              select(-link, -title, -author, -content, -power_supply_rating, -seat_storage_rating) %>%
+              separate(col = "aircraft", c("aircraft_make", "aircraft_model"), sep = " ") %>%
+              mutate(aircraft_model = ifelse(is.na(aircraft_model), aircraft_make, aircraft_model)) %>%
+              mutate(aircraft_make = ifelse(aircraft_make %in% airbus_mods, "AIRBUS", aircraft_make)) %>%
+              mutate(aircraft_make = ifelse(aircraft_make %in% boeing_mods, "BOEING", aircraft_make)) %>%
+              mutate(aircraft_make = ifelse(aircraft_make == "Embraer", "EMBRAER", aircraft_make)) %>%
+              filter(aircraft_make %in% c("AIRBUS", "BOEING", "EMBRAER"))
+
+seats_tidy$airline_name <- str_replace_all(seats_tidy$airline_name,"-"," ")
+seats_tidy$airline_name <- toupper(seats_tidy$airline_name)
+
+seats_tidy$aircraft_model <- str_replace_all(seats_tidy$aircraft_model,"B","")
+seats_tidy$aircraft_model <- str_replace_all(seats_tidy$aircraft_model,"ER","")
+seats_tidy$aircraft_model <- str_replace_all(seats_tidy$aircraft_model,"LR","")
+seats_tidy$aircraft_model <- str_remove(seats_tidy$aircraft_model, "-.*")
+seats_tidy$aircraft_model <- str_remove(seats_tidy$aircraft_model, "/.*")
+seats_tidy$seat_layout <- str_replace_all(seats_tidy$seat_layout,"-","x")
+
+glimpse(seats_tidy)
+```
+
+## Calculate
+```{r mutate}
+seats_tidy <- seats_tidy %>% mutate(ave_rating = seat_legroom_rating + ) 
+###unsure how to calculate an average of these columns for each observation check purrr package
+###purrr
+mutate((a+b+c)/3)
+fun <- function(a, b, c) mean(a+b+c)
+df %>% mutate(name = map(fun, a,b ,c)
+seats_tidy
+```
+
+# Plots
+
+### The most frequently rated airlines
+```{r group and summarise}
+by_airline <- seats_tidy %>% group_by(airline_name) %>%
+                             summarise(no_of_reviews = n()) %>% 
+                             filter(no_of_reviews >= 40) %>% 
+                             arrange(desc(no_of_reviews))
+by_airline 
+```
+  
+```{r ggplot bar chart}
+by_airline %>% ggplot(aes(x = airline_name, y = no_of_reviews, fill = no_of_reviews, colour = airline_name))+
+               geom_bar(stat = "identity") +
+               labs(title = "Most Rated Airlines", x = "AIRLINE", y = "Number of Reviews")
+```
+### Distribution of 'overall rating' variable for top 11 most frequently rated airlines
+```{r ggplot sbs boxplot}
+most_rated_airlines <- seats_tidy %>% filter(airline_name %in% c("AIR FRANCE","AMERICAN AIRLINES","BRITISH AIRWAYS","CATHAY PACIFIC AIRWAYS","EMIRATES","ETIHAD AIRWAYS","LUFTHANSA","QANTAS AIRWAYS","QATAR AIRWAYS","SINGAPORE AIRLINES","VIRGIN ATLANTIC AIRWAYS"))
+
+most_rated_airlines %>% ggplot(aes( x = airline_name, y = overall_rating, color = airline_name))+
+                        geom_boxplot() +
+                        geom_jitter(alpha = 0.1) +
+                        labs(title = "Overall Rating by Most Rated Airlines", x = "AIRLINE", y = "Overall Rating")
+```
+### Distribtution of "overall rating' variable by aircraft make
+```{r ggplot sbs boxplot}
+seats_tidy %>% ggplot(aes( x = aircraft_make, y = overall_rating, group = aircraft_make))+
+               geom_boxplot() +
+               geom_jitter(alpha = 0.1) +
+               labs(title = "Overall Rating: AIRBUS v BOEING v EMBRAER", x = "AIRCRAFT MAKE", y = "Overall Rating")
+```
+### Distribtution of "overall rating' variable by aircraft modlel
+```{r ggplot sbs boxplot}
+seats_tidy %>% filter(aircraft_model %in% c("737","747","757","767","777","787","A319","A320","A321","A330","A340","A380")) %>%
+               ggplot(aes( x = aircraft_model, y = overall_rating, group = aircraft_model))+
+               geom_boxplot() +
+               geom_jitter(alpha = 0.1) +
+               labs(title = "Overall Rating by Aircraft Model", x = "AIRCRAFT MODEL", y = "Overall Rating")
+```
+
