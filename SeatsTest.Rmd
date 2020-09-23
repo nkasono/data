@@ -71,8 +71,9 @@ seats_tidy
 ```{r group and summarise}
 by_airline <- seats_tidy %>% group_by(airline_name) %>%
                              summarise(no_of_reviews = n()) %>% 
-                             filter(no_of_reviews >= 40) %>% 
+                             filter(no_of_reviews >= 39) %>% 
                              arrange(desc(no_of_reviews))
+                            
 by_airline 
 ```
   
@@ -81,9 +82,9 @@ by_airline %>% ggplot(aes(x = airline_name, y = no_of_reviews, fill = no_of_revi
                geom_bar(stat = "identity") +
                labs(title = "Most Rated Airlines", x = "AIRLINE", y = "Number of Reviews")
 ```
-### Distribution of 'overall rating' variable for top 11 most frequently rated airlines
+### Distribution of 'overall rating' variable for top 12 most frequently rated airlines
 ```{r ggplot sbs boxplot}
-most_rated_airlines <- seats_tidy %>% filter(airline_name %in% c("AIR FRANCE","AMERICAN AIRLINES","BRITISH AIRWAYS","CATHAY PACIFIC AIRWAYS","EMIRATES","ETIHAD AIRWAYS","LUFTHANSA","QANTAS AIRWAYS","QATAR AIRWAYS","SINGAPORE AIRLINES","VIRGIN ATLANTIC AIRWAYS"))
+most_rated_airlines <- seats_tidy %>% filter(airline_name %in% c("AIR FRANCE","AMERICAN AIRLINES","BRITISH AIRWAYS","CATHAY PACIFIC AIRWAYS","EMIRATES","ETIHAD AIRWAYS","LUFTHANSA","QANTAS AIRWAYS","QATAR AIRWAYS","SINGAPORE AIRLINES","VIRGIN ATLANTIC AIRWAYS", "KLM ROYAL DUTCH AIRLINES"))
 
 most_rated_airlines %>% ggplot(aes( x = airline_name, y = overall_rating, color = airline_name))+
                         geom_boxplot() +
@@ -92,6 +93,18 @@ most_rated_airlines %>% ggplot(aes( x = airline_name, y = overall_rating, color 
                         labs(title = "Overall Rating by Most Rated Airlines", subtitle = "0 = Not Recommended, 1 = Recommended",
                              x = "AIRLINE", y = "Overall Rating")
 ```
+### Average Category Rating Distribution for the 12 Most Rated Airlines
+```{r ggplot}
+most_rated_airlines %>% ggplot(aes(mean_cat_rating)) +
+                        geom_density() +
+                        facet_wrap(.~airline_name) +
+                        labs(title = "Average Category Rating Distribution for the 12 Most Rated Airlines",
+                             x = "Average Category Rating", y = "Density of Average Category Rating")
+               
+```
+
+
+
 ### Distribtution of "overall rating' variable by aircraft make
 ```{r ggplot sbs boxplot}
 seats_tidy %>% ggplot(aes( x = aircraft_make, y = overall_rating, group = aircraft_make))+
@@ -116,3 +129,4 @@ most_rated_airlines %>% ggplot(aes( x = airline_name, y = mean_cat_rating, color
                         labs(title = "Average Category Rating by Most Rated Airlines", x = "AIRLINE", y = "Mean of the 5 Category Ratings")
 ```
 
+### The most recommended  airlines???
