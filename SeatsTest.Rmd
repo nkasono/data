@@ -78,9 +78,11 @@ by_airline
 ```
   
 ```{r ggplot bar chart}
-by_airline %>% ggplot(aes(x = airline_name, y = no_of_reviews, fill = no_of_reviews, colour = airline_name))+
+by_airline %>% ggplot(aes(x = airline_name, y = no_of_reviews,colour = airline_name))+
                geom_bar(stat = "identity") +
-               labs(title = "Most Rated Airlines", x = "AIRLINE", y = "Number of Reviews")
+               theme_minimal() +
+               theme(axis.text.x=element_text(size=6,angle=45, hjust=1), axis.ticks.x=element_blank(), legend.position="none") +
+               labs(title = "The 12 Most Frequently Rated Airlines", x = "AIRLINE", y = "Number of Reviews")
 ```
 ### Distribution of 'overall rating' variable for top 12 most frequently rated airlines
 ```{r ggplot sbs boxplot}
@@ -89,7 +91,9 @@ most_rated_airlines <- seats_tidy %>% filter(airline_name %in% c("AIR FRANCE","A
 most_rated_airlines %>% ggplot(aes( x = airline_name, y = overall_rating, color = airline_name))+
                         geom_boxplot() +
                         geom_jitter(alpha = 0.1) +
-                        facet_grid(.~ recommended) +
+                        facet_wrap(recommended~.) +
+                        theme_minimal() +
+                        theme(axis.text.x=element_blank(), axis.ticks.x=element_blank(), legend.text = element_text(size=6)) +
                         labs(title = "Overall Rating by Most Rated Airlines", subtitle = "0 = Not Recommended, 1 = Recommended",
                              x = "AIRLINE", y = "Overall Rating")
 ```
@@ -98,6 +102,8 @@ most_rated_airlines %>% ggplot(aes( x = airline_name, y = overall_rating, color 
 most_rated_airlines %>% ggplot(aes(mean_cat_rating)) +
                         geom_density() +
                         facet_wrap(.~airline_name) +
+                        theme_minimal() +
+                        theme(axis.text.x=element_text(size=6),axis.text.y=element_text(size=6)) +
                         labs(title = "Average Category Rating Distribution for the 12 Most Rated Airlines",
                              x = "Average Category Rating", y = "Density of Average Category Rating")
                
@@ -107,9 +113,10 @@ most_rated_airlines %>% ggplot(aes(mean_cat_rating)) +
 
 ### Distribtution of "overall rating' variable by aircraft make
 ```{r ggplot sbs boxplot}
-seats_tidy %>% ggplot(aes( x = aircraft_make, y = overall_rating, group = aircraft_make))+
+seats_tidy %>% ggplot(aes( x = aircraft_make, y = overall_rating, group = aircraft_make,))+
                geom_boxplot() +
                geom_jitter(alpha = 0.1) +
+               theme_minimal() +
                labs(title = "Overall Rating: AIRBUS v BOEING v EMBRAER", x = "AIRCRAFT MAKE", y = "Overall Rating")
 ```
 ### Distribtution of "overall rating' variable by aircraft modlel
@@ -118,6 +125,7 @@ seats_tidy %>% filter(aircraft_model %in% c("737","747","757","767","777","787",
                ggplot(aes( x = aircraft_model, y = overall_rating, group = aircraft_model))+
                geom_boxplot() +
                geom_jitter(alpha = 0.1) +
+               theme_minimal() +
                labs(title = "Overall Rating by Aircraft Model", x = "AIRCRAFT MODEL", y = "Overall Rating")
 ```
 
@@ -125,8 +133,10 @@ seats_tidy %>% filter(aircraft_model %in% c("737","747","757","767","777","787",
 ```{r}
 most_rated_airlines %>% ggplot(aes( x = airline_name, y = mean_cat_rating, color = airline_name))+
                         geom_boxplot() +
-                        geom_jitter(alpha = 0.1) +
-                        labs(title = "Average Category Rating by Most Rated Airlines", x = "AIRLINE", y = "Mean of the 5 Category Ratings")
+                        geom_jitter(alpha = 0.2) +
+                        theme_minimal() +
+                        theme(axis.text.x=element_blank(), axis.ticks.x=element_blank(), legend.text = element_text(size=6)) +
+                        labs(title = "Average Category Rating by Most Frequently Rated Airlines", x = "AIRLINE", y = "Mean of the 5 Category Ratings")
 ```
 
-### The most recommended  airlines???
+
