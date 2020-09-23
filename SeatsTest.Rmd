@@ -55,15 +55,13 @@ seats_tidy$seat_layout <- str_replace_all(seats_tidy$seat_layout,"-","x")
 
 glimpse(seats_tidy)
 ```
-
-## Calculate
-```{r mutate}
-seats_tidy <- seats_tidy %>% mutate(ave_rating = seat_legroom_rating + ) 
-###unsure how to calculate an average of these columns for each observation check purrr package
-###purrr
-mutate((a+b+c)/3)
-fun <- function(a, b, c) mean(a+b+c)
-df %>% mutate(name = map(fun, a,b ,c)
+### Calculate the mean of the category ratings
+```{r rowwise mutate}
+seats_tidy <- seats_tidy %>%
+              filter(!is.na(seat_legroom_rating),!is.na(seat_recline_rating),!is.na(seat_width_rating),
+                     !is.na(aisle_space_rating),!is.na(viewing_tv_rating)) %>%
+              rowwise() %>% 
+              mutate(mean_cat_rating = mean(seat_legroom_rating:viewing_tv_rating))
 seats_tidy
 ```
 
@@ -90,7 +88,9 @@ most_rated_airlines <- seats_tidy %>% filter(airline_name %in% c("AIR FRANCE","A
 most_rated_airlines %>% ggplot(aes( x = airline_name, y = overall_rating, color = airline_name))+
                         geom_boxplot() +
                         geom_jitter(alpha = 0.1) +
-                        labs(title = "Overall Rating by Most Rated Airlines", x = "AIRLINE", y = "Overall Rating")
+                        facet_grid(.~ recommended) +
+                        labs(title = "Overall Rating by Most Rated Airlines", subtitle = "0 = Not Recommended, 1 = Recommended",
+                             x = "AIRLINE", y = "Overall Rating")
 ```
 ### Distribtution of "overall rating' variable by aircraft make
 ```{r ggplot sbs boxplot}
@@ -106,5 +106,13 @@ seats_tidy %>% filter(aircraft_model %in% c("737","747","757","767","777","787",
                geom_boxplot() +
                geom_jitter(alpha = 0.1) +
                labs(title = "Overall Rating by Aircraft Model", x = "AIRCRAFT MODEL", y = "Overall Rating")
+```
+
+### Distribution of the mean of the '5 Category Ratings' for the most frequently rated airlines
+```{r}
+most_rated_airlines %>% ggplot(aes( x = airline_name, y = mean_cat_rating, color = airline_name))+
+                        geom_boxplot() +
+                        geom_jitter(alpha = 0.1) +
+                        labs(title = "Average Category Rating by Most Rated Airlines", x = "AIRLINE", y = "Mean of the 5 Category Ratings")
 ```
 
