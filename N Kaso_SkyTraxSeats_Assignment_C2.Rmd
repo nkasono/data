@@ -1,0 +1,277 @@
+---
+title: "__SkyTrax: Passenger Reviews of Airline Seats__"
+author: "Noel Kaso"
+date: "18/10/2020"
+output:
+  html_document: 
+    toc: true
+    toc_depth: 2
+    toc_float: true
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+library(tidyverse)
+library(visdat)
+```
+***
+# __DESCRIPTION__
+### Exploring airline seat reviews
+
+The data: a scraped data set from [SkyTrax](https://www.airlinequality.com) of passenger reviews of airline seats in 2015 as a CSV file.
+The set contains 1,258 reviews capturing 21 variables, including the passenger ratings of the airline seat over a number of categories. 
+I have considered the overall rating (score out of 10) and the category ratings (score out of 5) for seat legroom, recline, width, as well as aisle space and tv viewing.
+The tidied data set (1,232 observations, 16 variables) includes aircraft make and model as new, separate variables. An average (mean) of the category ratings has been calculated for each review (observation) in the set. 
+
+***
+# __EXPLANATION__
+### An expalation of the data set
+The SkyTrax....
+
+***
+# __QUESTIONS__
+
+### The Questions
+1. | Which airlines are the most frequently rated and which shows the best Overall Rating performance?
+2. | How does the variable Overall Rating vary amoungst the most frequently rated airlines?
+3. | How is the average of the Category Ratings distributed across the most frequently rated airlines?
+4. | How does Overall Rating vary between the major aircraft makes: Boeing and Airbus?
+5. | Which aircraft models show the best Overall Rating results?
+6. | Does Average Overall Rating predict Overall Rating?
+
+***
+# __METHODS AND VISUALISATIONS__
+
+### Working with the data
+This report...
+
+#### Read the data
+```{r read csv}
+seats <- read_csv("https://raw.githubusercontent.com/quankiquanki/skytrax-reviews-dataset/master/data/seat.csv")
+# Examine the data
+glimpse(seats)
+```
+#### Examine missing data
+```{r missingness plot}
+vis_miss(seats)
+```
+
+#### Tidy and wrangle the data
+```{r tidy, wrangle and glimpse}
+airbus_mods <- c("A300", "A310-300","A319","A320","A321", "A320-200","A330","A330-200","A330-300","A340","A340-300","A340-500","A340-600","A380", "A380-800","A300-600", "A321/A320", "Airbus","AIRBIS")
+
+boeing_mods <- c("B737-900", "B767", "B767-300", "B777", "B777-200", "B777-200LR", "B777-200ER", "B777-300", "B777-300ER", "B777-300", "B757-200", "B747-300", "Boeing747", "B777-300ER", "B747-400", "B757", "B757-200","B777-300W", "Boeing")
+
+seats_tidy <- seats %>% 
+              select(-link, -title, -author, -date_flown, -type_traveller, -content, -power_supply_rating, -seat_storage_rating) %>%
+              separate(col = "aircraft", c("aircraft_make", "aircraft_model"), sep = " ") %>%
+              mutate(aircraft_model = ifelse(is.na(aircraft_model), aircraft_make, aircraft_model)) %>%
+              mutate(aircraft_make = ifelse(aircraft_make %in% airbus_mods, "AIRBUS", aircraft_make)) %>%
+              mutate(aircraft_make = ifelse(aircraft_make %in% boeing_mods, "BOEING", aircraft_make)) %>%
+              filter(aircraft_make %in% c("AIRBUS", "BOEING"))
+
+seats_tidy$airline_name <- str_replace_all(seats_tidy$airline_name,"-"," ")
+seats_tidy$airline_name <- toupper(seats_tidy$airline_name)
+
+seats_tidy$aircraft_model <- str_replace_all(seats_tidy$aircraft_model,"B","")
+seats_tidy$aircraft_model <- str_replace_all(seats_tidy$aircraft_model,"ER","")
+seats_tidy$aircraft_model <- str_replace_all(seats_tidy$aircraft_model,"LR","")
+seats_tidy$aircraft_model <- str_remove(seats_tidy$aircraft_model, "-.*")
+seats_tidy$aircraft_model <- str_remove(seats_tidy$aircraft_model, "/.*")
+seats_tidy$seat_layout <- str_replace_all(seats_tidy$seat_layout,"-","x")
+
+glimpse(seats_tidy)
+```
+***
+## QUESTION 1: 
+### Which airlines are the most frequently rated and which shows the best Overall Rating performance?
+
+#### The 12 most frequently rated airlines
+```{r group and summarise}
+by_airline <- seats_tidy %>% group_by(airline_name) %>%
+                             summarise(num_of_reviews = n(),
+                                       mean_overall_rating = mean(overall_rating),
+                                       median_overall_rating = median(overall_rating),
+                                       sdev = sd(overall_rating)) %>% 
+                             filter(num_of_reviews >= 39) %>% 
+                             arrange(desc(num_of_reviews))
+                            
+by_airline
+```
+
+```{r ggplot bar chart}
+by_airline %>% ggplot(aes(x = reorder(airline_name,num_of_reviews), y = num_of_reviews, fill = airline_name))+
+               geom_bar(stat ="identity") +
+               theme_minimal() +
+               theme(axis.text.x=element_text(size=6, hjust=1), 
+                     axis.ticks.x=element_blank(), 
+                     legend.position="none") +
+               scale_fill_brewer(palette = "Paired") +
+               coord_flip() +
+               labs(title = "The 12 Most Frequently Rated Airlines", 
+                    x = "AIRLINE", 
+                    y = "Number of Reviews")
+              
+```
+
+***
+## QUESTION 2:
+### Distribution of overall rating for top 12 most frequently rated airlines
+```{r ggplot sbs boxplot}
+most_rated_airlines <- seats_tidy %>% filter(airline_name %in% c("AIR FRANCE","AMERICAN AIRLINES","BRITISH AIRWAYS","CATHAY PACIFIC AIRWAYS","EMIRATES","ETIHAD AIRWAYS","LUFTHANSA","QANTAS AIRWAYS","QATAR AIRWAYS","SINGAPORE AIRLINES","VIRGIN ATLANTIC AIRWAYS", "KLM ROYAL DUTCH AIRLINES"))
+
+most_rated_airlines %>% ggplot(aes( x = reorder(airline_name, overall_rating), y = overall_rating, colour = airline_name))+
+                        geom_boxplot() +
+                        geom_jitter(alpha = 0.2) +
+                        facet_wrap(recommended~.) +
+                        theme_minimal() +
+                        theme(axis.text.x=element_blank(), axis.ticks.x=element_blank(), legend.text = element_text(size=6)) +
+                        scale_colour_brewer(palette = "Paired") +
+                        labs(title = "Distribution of Overall Rating by the 12 Most Frequently Rated Airlines", 
+                             subtitle = "0 = Not Recommended, 1 = Recommended",
+                             x = "AIRLINE", 
+                             y = "Overall Rating")
+```
+
+***
+## QUESTION 3:
+### Distribution of average category rating for the 10 most frequently rated airlines
+
+#### Calculate the mean of the category ratings
+```{r row-wise mutate}
+most_rated_airlines <- most_rated_airlines %>% filter(!is.na(viewing_tv_rating)) %>%
+              rowwise() %>% 
+              mutate(mean_cat_rating = mean(seat_legroom_rating:viewing_tv_rating))
+
+glimpse(most_rated_airlines)
+```
+
+```{r ggplot density}
+
+most_rated_airlines %>% ggplot(aes(mean_cat_rating)) +
+                        geom_density() +
+                        facet_wrap(.~airline_name) +
+                        theme_minimal() +
+                        theme(axis.text.x=element_text(size=6),axis.text.y=element_text(size=6)) +
+                        labs(title = "Density Plot of Average Category Rating for the 12 Most Frequenlty Rated Airlines",
+                             x = "Average Category Rating", 
+                             y = "Density of Average Category Rating")
+               
+```
+
+```{r ggplot sbs boxplot2}
+most_rated_airlines %>% ggplot(aes( x = airline_name, y = mean_cat_rating, color = airline_name))+
+                        geom_boxplot() +
+                        geom_jitter(alpha = 0.2) +
+                        theme_minimal() +
+                        theme(axis.text.x=element_blank(), axis.ticks.x=element_blank(), legend.text = element_text(size=6)) +
+                        scale_color_brewer(palette = "Paired") +
+                        labs(title = "Distribution of Average Category Rating by Most Frequently Rated Airlines", 
+                             x = "AIRLINE",
+                             y = "Mean of the 5 Category Ratings")
+```
+
+***
+## QUESTION 4:
+### Distribtution of overall rating variable by aircraft make
+```{r ggplot sbs boxplot3}
+seats_tidy %>% ggplot(aes( x = aircraft_make, y = overall_rating))+
+               geom_boxplot() +
+               geom_jitter(alpha = 0.1) +
+               theme_minimal() +
+               labs(title = "Distributin of Overall Rating: AIRBUS v BOEING", 
+                    x = "AIRCRAFT MAKE", 
+                    y = "Overall Rating")
+```
+
+***
+## QUESTION 5:
+### Distribtution of overall rating variable by aircraft modlel
+```{r ggplot sbs boxplot4}
+seats_tidy %>% filter(aircraft_model %in% c("737","747","757","767","777","787","A319","A320","A321","A330","A340","A380")) %>%
+               ggplot(aes( x = aircraft_model, y = overall_rating, group = aircraft_model))+
+               geom_boxplot() +
+               geom_jitter(alpha = 0.1) +
+               theme_minimal() +
+               labs(title = "Distribution of Overall Rating by Aircraft Model", 
+                    x = "AIRCRAFT MODEL", 
+                    y = "Overall Rating")
+```
+
+***
+## QUESTION 6:
+### Does x predict y
+
+```{r}
+all_airlines_summary <- seats_tidy %>% group_by(airline_name) %>%
+                          summarise(average_overall_rating = mean(overall_rating),
+                                    average_seat_legroom_rating = mean(seat_legroom_rating),
+                                    average_seat_recline_rating = mean(seat_recline_rating),
+                                    average_seat_width_rating = mean(seat_width_rating),
+                                    average_aisle_space_rating = mean(aisle_space_rating),
+                                    average_viewing_tv_rating = mean(viewing_tv_rating))
+                              
+all_airlines_summary         
+``` 
+
+```{r}
+all_airlines_summary %>% ggplot(aes(x = average_seat_legroom_rating, y = average_overall_rating)) +
+                         geom_point()
+```
+```{r}
+all_airlines_summary %>% ggplot(aes(x = average_seat_recline_rating, y = average_overall_rating)) +
+                         geom_point()
+```
+
+```{r}
+all_airlines_summary %>% ggplot(aes(x = average_seat_width_rating, y = average_overall_rating)) +
+                         geom_point()
+```
+
+```{r}
+all_airlines_summary %>% ggplot(aes(x = average_aisle_space_rating, y = average_overall_rating)) +
+                         geom_point()
+```
+
+```{r}
+all_airlines_summary %>% ggplot(aes(x = average_viewing_tv_rating, y = average_overall_rating)) +
+                         geom_point()
+```
+
+***
+# __SUMMARY OF RESULTS__
+The SkyTrax airline passenger seat reviews...
+
+***
+# __CONCLUSION__
+The overall conclusion...
+
+***
+# __REFERENCES__
+Ref 1 https://raw.githubusercontent.com/quankiquanki/skytrax-reviews-dataset/master/data/seat.csv" (use overall page instead)
+Ref 2 https://bookdown.org/yihui/rmarkdown/html-document.html
+Ref 3 https://www.airlinequality.com
+Ref 4 https://dplyr.tidyverse.org/articles/rowwise.html
+
+
+
+# Plots
+
+## Which airlines are the most frequently rated?
+A bar chart may be used to display the airlines with the highest numbers of reviews. The key aesthetics will be variables airline_name and a new variable: no_of_reviews. The geom function will be geom_bar. 
+
+## How does overall rating vary amoungst the most frequently rated airlines?
+A box-plot can show the distribution of the values. Plan to use a series of side-by-side box-plots represetning the airlines. The variables airline_name and overall_rating will be the aesthetics. Functions geom_boxplot() and geom_jitter() give the box-plot and overly the data points as well. 
+                   
+                       
+## How is the average category rating distributed across the most frequently rated airlines?
+A histogram or density plot may be used to show this distribution. A new variable for the average value of the category ratings must be calculated. This will be plotted using geom_density() function and the plot faceted by airline_name to show the distribution for the twelve most frequently rated airlines.
+
+## How does overall rating vary between the major aircraft makes: Boeing, Airbus and Embraer?
+A box-plot with variables overall_rating and aircraft_make as the aesthetics. The data set will be filtered to aircraft_make values of Boeing, Airbus and Embraer.
+
+## Which aircraft models show the best overall rating results?
+A box-plot with variables overall_rating and aircraft_model as the aesthetics.
+
+
