@@ -14,6 +14,8 @@ output:
 knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
 library(tidyverse)
 library(visdat)
+library(gridExtra)
+library(broom)
 ```
 ***
 # __DESCRIPTION__
@@ -54,7 +56,7 @@ glimpse(seats)
 ```
 #### Examine missing data
 ```{r missingness plot}
-vis_miss(seats)
+vis_miss(seats, sort_miss = TRUE)
 ```
 
 #### Tidy and wrangle the data
@@ -205,39 +207,73 @@ seats_tidy %>% filter(aircraft_model %in% c("737","747","757","767","777","787",
 
 ```{r}
 all_airlines_summary <- seats_tidy %>% group_by(airline_name) %>%
-                          summarise(average_overall_rating = mean(overall_rating),
-                                    average_seat_legroom_rating = mean(seat_legroom_rating),
-                                    average_seat_recline_rating = mean(seat_recline_rating),
-                                    average_seat_width_rating = mean(seat_width_rating),
-                                    average_aisle_space_rating = mean(aisle_space_rating),
-                                    average_viewing_tv_rating = mean(viewing_tv_rating))
-                              
-all_airlines_summary         
+                          summarise(av_overall_rating = mean(overall_rating, na.rm = TRUE),
+                                    av_legroom= mean(seat_legroom_rating, na.rm = TRUE),
+                                    av_recline = mean(seat_recline_rating, na.rm = TRUE),
+                                    av_width = mean(seat_width_rating, na.rm = TRUE),
+                                    av_aspace = mean(aisle_space_rating, na.rm = TRUE),
+                                    av_tv = mean(viewing_tv_rating, na.rm = TRUE)) %>%
+                        arrange(desc(av_overall_rating))
+                        
+all_airlines_summary     
 ``` 
-
 ```{r}
-all_airlines_summary %>% ggplot(aes(x = average_seat_legroom_rating, y = average_overall_rating)) +
-                         geom_point()
-```
-```{r}
-all_airlines_summary %>% ggplot(aes(x = average_seat_recline_rating, y = average_overall_rating)) +
-                         geom_point()
+all_airlines_summary %>% summarise(cor(average_seat_legroom_rating, average_overall_rating),
+                                   cor(average_seat_recline_rating, average_overall_rating),
+                                   cor(average_seat_width_rating, average_overall_rating),
+                                   cor(average_aisle_space_rating, average_overall_rating))
 ```
 
 ```{r}
-all_airlines_summary %>% ggplot(aes(x = average_seat_width_rating, y = average_overall_rating)) +
-                         geom_point()
+lm1 <- all_airlines_summary %>% ggplot(aes(x = average_seat_legroom_rating, y = average_overall_rating)) +
+                                geom_point() +
+                                geom_smooth(method = "lm", se=FALSE)
+
+lm2 <- all_airlines_summary %>% ggplot(aes(x = average_seat_recline_rating, y = average_overall_rating)) +
+                                geom_point() +
+                                geom_smooth(method = "lm", se=FALSE)
+
+lm3 <- all_airlines_summary %>% ggplot(aes(x = average_seat_width_rating, y = average_overall_rating)) +
+                                geom_point() +
+                                geom_smooth(method = "lm", se=FALSE)
+
+lm4 <- all_airlines_summary %>% ggplot(aes(x = average_aisle_space_rating, y = average_overall_rating)) +
+                                geom_point() +
+                                geom_smooth(method = "lm", se=FALSE)
+
+lm5 <- all_airlines_summary %>% ggplot(aes(x = average_viewing_tv_rating, y = average_overall_rating)) +
+                                geom_point() +
+                                geom_smooth(method = "lm", se=FALSE)
+grid.arrange(lm1, lm2, lm3,lm4,lm5, ncol=3)
+```
+  
+```{r}
+overall_model3 <- lm(average_overall_rating ~ average_aisle_space_rating * average_seat_width_rating, data = all_airlines_summary)
+
+summary(overall_model3)
+tidy(overall_model3)
+glance(overall_model3)
+```
+
+
+```{r}
+overall_model1 <- lm(average_overall_rating ~ average_aisle_space_rating + average_seat_legroom_rating + average_seat_recline_rating + average_seat_width_rating + average_viewing_tv_rating, data = all_airlines_summary)
+
+summary(overall_model1)
+tidy(overall_model1)
+glance(overall_model1)
 ```
 
 ```{r}
-all_airlines_summary %>% ggplot(aes(x = average_aisle_space_rating, y = average_overall_rating)) +
-                         geom_point()
+overall_model2 <- lm(formula = average_overall_rating ~ average_aisle_space_rating * average_seat_legroom_rating * average_seat_recline_rating * average_seat_width_rating * average_viewing_tv_rating, data = all_airlines_summary)
+
+summary(overall_model2)
+tidy(overall_model2)
+glance(overall_model2)
 ```
 
-```{r}
-all_airlines_summary %>% ggplot(aes(x = average_viewing_tv_rating, y = average_overall_rating)) +
-                         geom_point()
-```
+
+
 
 ***
 # __SUMMARY OF RESULTS__
