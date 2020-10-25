@@ -205,75 +205,112 @@ seats_tidy %>% filter(aircraft_model %in% c("737","747","757","767","777","787",
 ## QUESTION 6:
 ### Does x predict y
 
+#### Calculate the average (mean) of the Overall Rating variable and each category rating variable
+
 ```{r}
 all_airlines_summary <- seats_tidy %>% group_by(airline_name) %>%
-                          summarise(av_overall_rating = mean(overall_rating, na.rm = TRUE),
-                                    av_legroom= mean(seat_legroom_rating, na.rm = TRUE),
-                                    av_recline = mean(seat_recline_rating, na.rm = TRUE),
-                                    av_width = mean(seat_width_rating, na.rm = TRUE),
-                                    av_aspace = mean(aisle_space_rating, na.rm = TRUE),
-                                    av_tv = mean(viewing_tv_rating, na.rm = TRUE)) %>%
+                        summarise(av_overall_rating = mean(overall_rating, na.rm = TRUE),
+                                  av_legroom= mean(seat_legroom_rating, na.rm = TRUE),
+                                  av_recline = mean(seat_recline_rating, na.rm = TRUE),
+                                  av_width = mean(seat_width_rating, na.rm = TRUE),
+                                  av_aspace = mean(aisle_space_rating, na.rm = TRUE),
+                                  av_tv = mean(viewing_tv_rating, na.rm = TRUE)) %>%
                         arrange(desc(av_overall_rating))
                         
 all_airlines_summary     
 ``` 
+
+#### Plot a linear model of each average category variable against the Average Overall Rating variable
 ```{r}
-all_airlines_summary %>% summarise(cor(average_seat_legroom_rating, average_overall_rating),
-                                   cor(average_seat_recline_rating, average_overall_rating),
-                                   cor(average_seat_width_rating, average_overall_rating),
-                                   cor(average_aisle_space_rating, average_overall_rating))
-```
-
-```{r}
-lm1 <- all_airlines_summary %>% ggplot(aes(x = average_seat_legroom_rating, y = average_overall_rating)) +
+lm1 <- all_airlines_summary %>% ggplot(aes(x = av_legroom, y = av_overall_rating)) +
                                 geom_point() +
-                                geom_smooth(method = "lm", se=FALSE)
+                                geom_smooth(method = "lm", se=FALSE) +
+                                theme_minimal() +
+                                theme(axis.text.x=element_text(size=8),axis.text.y=element_text(size=8)) +
+                                labs( x = "Average Legroom Rating", y = "Average Overall Rating")
 
-lm2 <- all_airlines_summary %>% ggplot(aes(x = average_seat_recline_rating, y = average_overall_rating)) +
+lm2 <- all_airlines_summary %>% ggplot(aes(x = av_recline, y = av_overall_rating)) +
                                 geom_point() +
-                                geom_smooth(method = "lm", se=FALSE)
+                                geom_smooth(method = "lm", se=FALSE) +
+                                theme_minimal() +
+                                theme(axis.text.x=element_text(size=8),axis.text.y=element_text(size=8)) +
+                                labs( x = "Average Seat Recline Rating", y = NULL)
 
-lm3 <- all_airlines_summary %>% ggplot(aes(x = average_seat_width_rating, y = average_overall_rating)) +
+lm3 <- all_airlines_summary %>% ggplot(aes(x = av_width, y = av_overall_rating)) +
                                 geom_point() +
-                                geom_smooth(method = "lm", se=FALSE)
+                                geom_smooth(method = "lm", se=FALSE) +
+                                theme_minimal() +
+                                theme(axis.text.x=element_text(size=8),axis.text.y=element_text(size=8)) +
+                                labs( x = "Average Seat Width Rating", y = NULL)
 
-lm4 <- all_airlines_summary %>% ggplot(aes(x = average_aisle_space_rating, y = average_overall_rating)) +
+lm4 <- all_airlines_summary %>% ggplot(aes(x = av_aspace, y = av_overall_rating)) +
                                 geom_point() +
-                                geom_smooth(method = "lm", se=FALSE)
+                                geom_smooth(method = "lm", se=FALSE) +
+                                theme_minimal() +
+                                theme(axis.text.x=element_text(size=8),axis.text.y=element_text(size=8)) +
+                                labs( x = "Average Aisle Space Rating", y = "Average Overall Rating")
 
-lm5 <- all_airlines_summary %>% ggplot(aes(x = average_viewing_tv_rating, y = average_overall_rating)) +
+lm5 <- all_airlines_summary %>% ggplot(aes(x = av_tv, y = av_overall_rating)) +
                                 geom_point() +
-                                geom_smooth(method = "lm", se=FALSE)
+                                geom_smooth(method = "lm", se=FALSE) +
+                                theme_minimal() +
+                                theme(axis.text.x=element_text(size=8),axis.text.y=element_text(size=8)) +
+                                labs( x = "Average Viewing TV Rating", y = NULL)
+
 grid.arrange(lm1, lm2, lm3,lm4,lm5, ncol=3)
 ```
-  
+#### Calculate the Correlation Coefficient between each average category variable and the Average Overall Rating variable
 ```{r}
-overall_model3 <- lm(average_overall_rating ~ average_aisle_space_rating * average_seat_width_rating, data = all_airlines_summary)
-
-summary(overall_model3)
-tidy(overall_model3)
-glance(overall_model3)
+all_airlines_summary %>% summarise(cor(av_legroom, av_overall_rating),
+                                   cor(av_recline, av_overall_rating),
+                                   cor(av_width, av_overall_rating),
+                                   cor(av_aspace, av_overall_rating)) %>%
+                                   gather("Variables","Correlation Coeff")
 ```
 
+#### Model 1: a single variable model considering average aisle space rating
+
+$$av.overall.rating = \beta_0 + \beta_1 av.aspace + \varepsilon$$
 
 ```{r}
-overall_model1 <- lm(average_overall_rating ~ average_aisle_space_rating + average_seat_legroom_rating + average_seat_recline_rating + average_seat_width_rating + average_viewing_tv_rating, data = all_airlines_summary)
+overall_model_1 <- lm(av_overall_rating ~ av_aspace, data = all_airlines_summary)
 
-summary(overall_model1)
-tidy(overall_model1)
-glance(overall_model1)
+summary(overall_model_1)
+tidy(overall_model_1)
+glance(overall_model_1)
 ```
+
+#### Model 2: an interaction beween the average aisle space and average seat recline ratings
+
+$$av.overall.rating = \beta_0 + \beta_1 av.aspace * \beta_2 av.recline + \varepsilon$$
+```{r}
+overall_model_2 <- lm(av_overall_rating ~ av_aspace * av_recline, data = all_airlines_summary)
+
+summary(overall_model_2)
+tidy(overall_model_2)
+glance(overall_model_2)
+```
+
+#### Model 3: an interaction between average aisle space, average seat recline and average seat width ratings
+
+$$av.overall.rating = \beta_0 + \beta_1 av.aspace * \beta_2 av.recline * \beta_3 av.width + \varepsilon$$
 
 ```{r}
-overall_model2 <- lm(formula = average_overall_rating ~ average_aisle_space_rating * average_seat_legroom_rating * average_seat_recline_rating * average_seat_width_rating * average_viewing_tv_rating, data = all_airlines_summary)
+overall_model_3 <- lm(av_overall_rating ~ av_aspace * av_recline * av_width, data = all_airlines_summary)
 
-summary(overall_model2)
-tidy(overall_model2)
-glance(overall_model2)
+summary(overall_model_3)
+tidy(overall_model_3)
+glance(overall_model_3)
 ```
 
+Model 2 is an improvement on Model 1 - the adjusted R-Squared value has increased and the value of BIC has decreased. This indicates that Model 2 is a better fit, explaining 79% of the variation in the Average Overall Score. In Model 3 adding an additional independent variable has increased the value of R-Squared somewhat, however the value of BIC is greater than for Model 2. Therefore Model 2 is the preferred model. 
 
+#### Using Model 2 to predict the Average Overall Score
 
+$$\widehat{av.overall.rating} =  1.096 av.aspace * 0.785 av.recline - 1.349$$
+```{r}
+augment(overall_model_2, all_airlines_summary) #Using augment to obtain fitted values and residuals
+```
 
 ***
 # __SUMMARY OF RESULTS__
