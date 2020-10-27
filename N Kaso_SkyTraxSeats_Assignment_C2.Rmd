@@ -1,7 +1,7 @@
 ---
 title: "__SkyTrax: Passenger Reviews of Airline Seats__"
 author: "Noel Kaso"
-date: "18/10/2020"
+date: "30/10/2020"
 output:
   html_document: 
     toc: true
@@ -21,15 +21,9 @@ library(broom)
 # __DESCRIPTION__
 ### Exploring airline seat reviews
 
-The data: a scraped data set from [SkyTrax](https://www.airlinequality.com) of passenger reviews of airline seats in 2015 as a CSV file.
-The set contains 1,258 reviews capturing 21 variables, including the passenger ratings of the airline seat over a number of categories. 
-I have considered the overall rating (score out of 10) and the category ratings (score out of 5) for seat legroom, recline, width, as well as aisle space and tv viewing.
-The tidied data set (1,232 observations, 16 variables) includes aircraft make and model as new, separate variables. An average (mean) of the category ratings has been calculated for each review (observation) in the set. 
+The [SkyTrax](https://www.airlinequality.com) website allows passengers to review many aspects of air travel - originally created as an independent customer forum, it has become a leading review site for airlines, airports and associated reviews (REF: https://www.airlinequality.com/about-us/ )
 
-***
-# __EXPLANATION__
-### An expalation of the data set
-The SkyTrax....
+This report considers passenger airline seat reviews and seeks to answer a series of questions about these reviews with respect to the major airlines and aircraft types. 
 
 ***
 # __QUESTIONS__
@@ -40,13 +34,37 @@ The SkyTrax....
 3. | How is the average of the Category Ratings distributed across the most frequently rated airlines?
 4. | How does Overall Rating vary between the major aircraft makes: Boeing and Airbus?
 5. | Which aircraft models show the best Overall Rating results?
-6. | Does Average Overall Rating predict Overall Rating?
+6. | What relationship exists between the Average Overall Rating and the Average Category Ratings and can the Average Overall Rating be predicted by one of more of these variables?
+
+***
+# __EXPLANATION__
+### An expalation of the data set
+The data set considered contains airlines passenger reviews of aircraft seats. The data was scraped in 2015 from [SkyTrax](https://www.airlinequality.com). The set contains 1,258 reviews (observations) comprising 21 variables, including the passenger rating of the airline seat overall (score out of 10) and a rating over a number of categories (score out of 5). These ratings are referred to the Category Ratings and cover: seat legroom, width, recline, aisle space, viewing tv, power supply and seat storage. The airline name, aircraft make and model are also captured. Whether the passenger would recommend the airline seat is captured in the variable Recommended as numeric indicator. 
+
+Four variables exhibited a degree of missingness (REF??) greater than 90% and these were excluded from the analysis. Passenger reviews where the category rating variable  Viewing TV Rating was missign occured to a low degree, therefore these observations were removed from analysis by filtering. Overall the  variables most relevant to the questions are 100% present in the data set.
+
+### Approach to tidying and wrangling 
+Variables relevant to the questions were included in the tidy data using the Select (REF??) function as this allows for focus. 
+
+The variable Aircraft was split into Aircraft Make and Aircraft Model by the Separate (REF??) function. The values of these two new variables were made more consistent using three Mutate (REF??) operations with if_else fucntions (REF??). This was done to achieve a consistent value in each. 
+
+Filtering was applied to the Aircraft Make as the questions posed relate to Boeing and Airbus. 
+
+String Replace and Remove (REF??) allowed for the values in the new variables to be improved by removing non-alphanumeric characters and giving a  single string without additional characters of sub-model descriptors such as "-200LR", "-300W". 
+
+The tidied data set contains 1,226 observations across 14 variables relevant to the questions posed in the following section. 
+
+### Calculating an average of categroy ratings for each row
+To calculate the average of the category ratings for each review a Row-Wise (REF??) process was required with the Mutate function. This is set-out in Question 3. 
+
+Further explanations of the approach to the tidy data set are set-out in the following sections for each question. 
+
 
 ***
 # __METHODS AND VISUALISATIONS__
 
 ### Working with the data
-This report...
+This section set-outs the methods used to read, wrangle and tidy the data set. Firstly, a visualisation of missingness has been considered using the vis_miss function (REF??). Then a tidy data set has been formed (seats_tidy) and further methods applied under each question. 
 
 #### Read the data
 ```{r read csv}
@@ -58,21 +76,28 @@ glimpse(seats)
 ```{r missingness plot}
 vis_miss(seats, sort_miss = TRUE)
 ```
+In the data set four variables exhibit a very high degree of missingness, that is, greater than 90%: two of the seat category ratings (Power Supply and Storage), the Date Flown and Traveller Type. All four variables were excluded from the analysis. The category rating variable Viewing TV Rating is missing from a small number of observations (passenger reviews), therefore these reviews were removed from analysis by filtering. Overall the key variables most relevant to the questions are 100% present in the data set.
 
 #### Tidy and wrangle the data
 ```{r tidy, wrangle and glimpse}
+# Define the set of aircraft models where aircraft_make = Airbus
 airbus_mods <- c("A300", "A310-300","A319","A320","A321", "A320-200","A330","A330-200","A330-300","A340","A340-300","A340-500","A340-600","A380", "A380-800","A300-600", "A321/A320", "Airbus","AIRBIS")
 
+# Define the set of aircraft models where aircraft_make = Boeing
 boeing_mods <- c("B737-900", "B767", "B767-300", "B777", "B777-200", "B777-200LR", "B777-200ER", "B777-300", "B777-300ER", "B777-300", "B757-200", "B747-300", "Boeing747", "B777-300ER", "B747-400", "B757", "B757-200","B777-300W", "Boeing")
 
+# Create a tidy data set wtih only the relevant variables (columns)
+# Using the Mutate function improve the consistency of values for aircraft_make and aircraft_model
 seats_tidy <- seats %>% 
               select(-link, -title, -author, -date_flown, -type_traveller, -content, -power_supply_rating, -seat_storage_rating) %>%
               separate(col = "aircraft", c("aircraft_make", "aircraft_model"), sep = " ") %>%
               mutate(aircraft_model = ifelse(is.na(aircraft_model), aircraft_make, aircraft_model)) %>%
+              # Using mutate replace missing aircraft_models wth the value from aircraft_make
               mutate(aircraft_make = ifelse(aircraft_make %in% airbus_mods, "AIRBUS", aircraft_make)) %>%
               mutate(aircraft_make = ifelse(aircraft_make %in% boeing_mods, "BOEING", aircraft_make)) %>%
-              filter(aircraft_make %in% c("AIRBUS", "BOEING"))
+              filter(aircraft_make %in% c("AIRBUS", "BOEING")) # Filter the data set for Airbus and Boeing
 
+# Using Sting Replace and Remove to improve the consistency of values for aircraft_make and aircraft_model so that all models are a single string without additional characters of sub-model descriptors: eg: remove "-200LR", "-300W" 
 seats_tidy$airline_name <- str_replace_all(seats_tidy$airline_name,"-"," ")
 seats_tidy$airline_name <- toupper(seats_tidy$airline_name)
 
@@ -259,6 +284,7 @@ lm5 <- all_airlines_summary %>% ggplot(aes(x = av_tv, y = av_overall_rating)) +
 
 grid.arrange(lm1, lm2, lm3,lm4,lm5, ncol=3)
 ```
+
 #### Calculate the Correlation Coefficient between each average category variable and the Average Overall Rating variable
 ```{r}
 all_airlines_summary %>% summarise(cor(av_legroom, av_overall_rating),
@@ -309,7 +335,15 @@ Model 2 is an improvement on Model 1 - the adjusted R-Squared value has increase
 
 $$\widehat{av.overall.rating} =  1.096 av.aspace * 0.785 av.recline - 1.349$$
 ```{r}
-augment(overall_model_2, all_airlines_summary) #Using augment to obtain fitted values and residuals
+overall_model_2_augm <- augment(overall_model_2, all_airlines_summary) #Using augment to obtain fitted values and residuals
+overall_model_2_augm
+```
+
+```{r}
+# Examine residuals
+overall_model_2_augm %>% ggplot(aes(x=av_overall_rating, y=.resid)) + 
+  geom_point() +
+  labs(title = "Residual against fitted value")
 ```
 
 ***
