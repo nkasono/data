@@ -41,14 +41,14 @@ This report considers passenger airline seat reviews and seeks to answer a serie
 ### An expalation of the data set
 The data set considered contains airlines passenger reviews of aircraft seats. The data was scraped in 2015 from [SkyTrax](https://www.airlinequality.com). The set contains 1,258 reviews (observations) comprising 21 variables, including the passenger rating of the airline seat overall (score out of 10) and a rating over a number of categories (score out of 5). These ratings are referred to the Category Ratings and cover: seat legroom, width, recline, aisle space, viewing tv, power supply and seat storage. The airline name, aircraft make and model are also captured. Whether the passenger would recommend the airline seat is captured in the variable Recommended as numeric indicator. 
 
-Four variables exhibited a degree of missingness (REF??) greater than 90% and these were excluded from the analysis. Passenger reviews where the category rating variable  Viewing TV Rating was missign occured to a low degree, therefore these observations were removed from analysis by filtering. Overall the  variables most relevant to the questions are 100% present in the data set.
+Four variables exhibited a degree of missingness (REF??) greater than 90% and these were excluded from the analysis. Passenger reviews where the category rating variable Viewing TV Rating was missing occurred to a low degree, therefore these observations were removed from analysis by filtering. Overall the  variables most relevant to the questions are 100% present in the data set.
 
 ### Approach to tidying and wrangling 
 Variables relevant to the questions were included in the tidy data using the Select (REF??) function - this allowed for focus on the variables relevant to the questions posed. 
 
-The variable Aircraft was split into Aircraft Make and Aircraft Model using the Separate (REF??) function. The consistency of the values stored in these two new variables was improved using three Mutate (REF??) operations with if_else fucntions (REF??). String Replace and Remove (REF??) allowed for the values in the new variables to be improved by removing non-alphanumeric characters and giving a single string value without additional characters of sub-model descriptors such as "-200LR", "-300W". 
+The variable Aircraft was split into Aircraft Make and Aircraft Model using the Separate (REF??) function. The consistency of the values stored in these two new variables was improved using three Mutate (REF??) operations with if_else functions (REF??). String Replace and Remove (REF??) allowed for the values in the new variables to be improved by removing non-alphanumeric characters and giving a single string value without additional characters of sub-model descriptors such as "-200LR", "-300W". 
 
-Filtering was applied to the Aircraft Make variable as the questions posed relate to Boeing and Airbus. 
+Filtering (REF##) was applied to the Aircraft Make variable as the questions posed relate to Boeing and Airbus. 
 
 The tidied data set contains 1,226 observations across 14 variables relevant to the questions posed. 
 
@@ -115,6 +115,8 @@ glimpse(seats_tidy)
 ***
 ## QUESTION 1: 
 ### Which airlines are the most frequently rated and which shows the best Overall Rating performance?
+
+Here the functions group_by, summarise and arrange have been used (REF###)
 
 #### The 12 most frequently rated airlines
 ```{r group and summarise}
@@ -388,15 +390,46 @@ In response to Question 6 three models were considered and Model 2 was selected 
 
 ***
 # __CONCLUSION__
-The SkyTrax airline passenger seat reviews...
+This report aimed to answer six questions relating to the SkyTrax airline passenger seat reviews data. A tidy data set of 1,226 observations across 14 variables was used to visualise and model responses to the questions. Overall, the performance of the most frequently rated airlines was shown to vary considerably. The methods and visual plots used in response to each question allowed for some discussion in relation to each question, while the linear model employed was also shown to make reasonable predictions. 
 
 ***
 # __REFERENCES__
-Ref 1 https://raw.githubusercontent.com/quankiquanki/skytrax-reviews-dataset/master/data/seat.csv" (use overall page instead)
-Ref 2 https://bookdown.org/yihui/rmarkdown/html-document.html
-Ref 3 https://www.airlinequality.com
-Ref 4 https://dplyr.tidyverse.org/articles/rowwise.html
 
+Chang, Winston., Dunnington,Dewey., Henry, Lionel., Pedersen, Thomas Lin., Takahashi, Kohske Wickham,Hadley., Wilke,Claus., Woo,Kara., Yutani, Hiroaki. (n.d). ggplot2: part of the tidyverse
+Retrieved from https://ggplot2.tidyverse.org/reference/index.html
+
+Grolemund, Garrett., Wickham, Hadley. (n.d). R for Data Science
+Retrieved from https://r4ds.had.co.nz
+
+Hayes, Alex. (2020). broom: Convert Statistical Objects into Tidy Tibbles
+Retrieved from https://CRAN.R-project.org/package=broom
+
+Monash University. (2020). Goodness of fit
+Retrieved from https://www.futurelearn.com/courses/data-science-modelling-and-visualisation/4/steps/869615
+
+SkyTrax. (n.d). Our Background
+Retrieved from https://www.airlinequality.com/about-us/
+
+Skytrax User Reviews Dataset. (2015).
+Retrieved from https://github.com/quankiquanki/skytrax-reviews-dataset
+
+Tierney, Nicholas. (2019). Using Visdat
+Retrieved from https://cran.r-project.org/web/packages/visdat/vignettes/using_visdat.html
+
+Wickham, Hadley., François, Romain.,  Henry, Lionel., Müller, Kirill. (n.d). Row-wise Operations
+Retrieved from https://dplyr.tidyverse.org/articles/rowwise.html
+
+Wickham, Hadley.(2019). Remove Matched Patterns In A String
+Retrieved from https://www.rdocumentation.org/packages/stringr/versions/1.4.0/topics/str_remove
+
+Wickham, Hadley.(2019). Replace Matched Patterns In A String
+Retrieved from https://www.rdocumentation.org/packages/stringr/versions/1.4.0/topics/str_replace
+
+Wickham, Hadley., François, Romain.,  Henry, Lionel., Müller, Kirill. (n.d). Vectorised If
+Retrieved from https://dplyr.tidyverse.org/reference/if_else.html
+
+Xie, Yihui., Allaire, J.J., Grolemund, Garrett. (2020). R Markdown: The Definitive Guide
+Retrieved from https://bookdown.org/yihui/rmarkdown/html-document.html
 
 
 
