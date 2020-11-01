@@ -1,0 +1,435 @@
+---
+title: "__SkyTrax: Passenger Reviews of Airline Seats__"
+author: "Noel Kaso"
+date: "30/10/2020"
+output:
+  html_document: 
+    toc: true
+    toc_depth: 2
+    toc_float: true
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+library(tidyverse)
+library(visdat)
+library(gridExtra)
+library(broom)
+```
+***
+# __DESCRIPTION__
+### Exploring airline seat reviews
+
+The [SkyTrax](https://www.airlinequality.com) website allows passengers to review many aspects of air travel, originally created as an independent customer forum, it has become a leading review site for airlines, airports and associated reviews (SkyTrax, n.d).
+
+This report considers passenger airline seat reviews and seeks to answer a series of questions about these reviews with respect to the major airlines and aircraft types. Moreover, it is interesting to explore whether passenger ratings across a number of sub-criteria, or categories, correlate with their overall rating of the airline seat. There maybe a category rating that closely aligns with the overall rating and this might offer insights into the factors that determine a passenger review rating. 
+
+***
+# __QUESTIONS__
+
+### The Questions
+1. | Which airlines are the most frequently rated and which shows the best Overall Rating performance?
+2. | How does the variable Overall Rating vary amoungst the most frequently rated airlines?
+3. | How is the average of the Category Ratings distributed across the most frequently rated airlines?
+4. | How does Overall Rating vary between the major aircraft makes: Boeing and Airbus?
+5. | Which aircraft models show the best Overall Rating results?
+6. | What relationship exists between the Average Overall Rating and the Average Category Ratings and can the Average Overall Rating be predicted by one of more of these variables?
+
+***
+# __EXPLANATION__
+### An expalation of the data set
+The data set considered contains airlines passenger reviews of aircraft seats. The data was scraped in 2015 from [SkyTrax](https://www.airlinequality.com). The set contains 1,258 reviews (observations) comprising 21 variables, including the passenger rating of the airline seat overall (score out of 10) and a rating over a number of categories (score out of 5). These ratings are referred to, in this report, as the Category Ratings and cover: seat legroom, width, recline, aisle space, viewing tv, power supply and seat storage. The airline name, aircraft make and model are also captured. Whether the passenger would recommend the airline seat, or not, is captured in the variable Recommended as numeric indicator. 
+
+Four variables exhibited a degree of missingness (Tierney, 2019) greater than 90% and these were excluded from the analysis. Passenger reviews where the category rating variable Viewing TV Rating was missing occurred to a low degree, therefore these observations were removed from analysis by filtering. Overall the  variables most relevant to the questions are 100% present in the data set.
+
+### Approach to tidying and wrangling 
+Variables relevant to the questions were included in the tidy data using the Select (Grolemund,Wickham, n.d) function - this allowed for focus on the variables relevant to the questions posed. 
+
+The variable Aircraft was split into Aircraft Make and Aircraft Model using the Separate function (Grolemund,Wickham, n.d). The consistency of the values stored in these two new variables was improved using three Mutate (Grolemund,Wickham, n.d) operations with if_else functions (Wickham,François,Henry,Müller, n.d). String Replace and Remove (Wickham,2019) allowed for the values in the new variables to be improved by removing non-alphanumeric characters and giving a single string value without additional characters of sub-model descriptors such as "-200LR", "-300W". 
+
+Filtering (Grolemund,Wickham, n.d) was applied to the Aircraft Make variable as the questions posed relate to Boeing and Airbus. 
+
+The tidied data set contains 1,226 observations across 14 variables relevant to the questions posed. 
+
+### Calculating an average of categroy ratings for each row
+To calculate the average of the category ratings for each review a row-wise (Wickham,François,Henry,Müller,n.d) process was required with the Mutate function (Grolemund,Wickham, n.d). This is set-out in Question 3. 
+
+Further explanations of the approach to the tidy data set are set-out in the following sections for each question. 
+
+
+***
+# __METHODS AND VISUALISATIONS__
+
+### Working with the data
+This section set-out the methods used to read, wrangle and tidy the data set. Firstly, a visualisation of missingness has been considered using the vis_miss function (Tierney, 2019). Then a tidy data set has been formed (seats_tidy) and further methods applied under each question. 
+
+#### Read the data
+```{r read csv}
+# Read the CSV data
+seats <- read_csv("https://raw.githubusercontent.com/quankiquanki/skytrax-reviews-dataset/master/data/seat.csv")
+# Examine the raw data
+glimpse(seats)
+```
+#### Examine missing data
+```{r missingness plot}
+vis_miss(seats, sort_miss = TRUE)
+```
+
+In the data set four variables exhibit a very high degree of missingness, that is, greater than 90%: two of the seat category ratings (Power Supply and Storage), the Date Flown and Traveller Type. All four variables were excluded from the analysis. The category rating variable Viewing TV Rating is missing from a small number of observations (passenger reviews), therefore these reviews were removed from analysis by filtering (Grolemund,Wickham, n.d). Overall the key variables most relevant to the questions are 100% present in the data set.
+
+#### Tidy and wrangle the data
+```{r tidy, wrangle and glimpse}
+# Define the set of aircraft models where aircraft_make = Airbus
+airbus_mods <- c("A300", "A310-300","A319","A320","A321", "A320-200","A330","A330-200","A330-300","A340","A340-300","A340-500","A340-600","A380", "A380-800","A300-600", "A321/A320", "Airbus","AIRBIS")
+
+# Define the set of aircraft models where aircraft_make = Boeing
+boeing_mods <- c("B737-900", "B767", "B767-300", "B777", "B777-200", "B777-200LR", "B777-200ER", "B777-300", "B777-300ER", "B777-300", "B757-200", "B747-300", "Boeing747", "B777-300ER", "B747-400", "B757", "B757-200","B777-300W", "Boeing")
+
+
+
+seats_tidy <- seats %>% 
+              # Create a tidy data set with only the relevant variables (columns)
+              select(-link, -title, -author, -date_flown, -type_traveller, -content, -power_supply_rating, -seat_storage_rating) %>%
+              # Create two new variables and then using the Mutate function improve the consistency of values for aircraft_make and                aircraft_model
+              separate(col = "aircraft", c("aircraft_make", "aircraft_model"), sep = " ") %>%
+              mutate(aircraft_model = ifelse(is.na(aircraft_model), aircraft_make, aircraft_model)) %>%
+              # Using mutate replace missing aircraft_models with the value from aircraft_make
+              mutate(aircraft_make = ifelse(aircraft_make %in% airbus_mods, "AIRBUS", aircraft_make)) %>%
+              mutate(aircraft_make = ifelse(aircraft_make %in% boeing_mods, "BOEING", aircraft_make)) %>%
+              filter(aircraft_make %in% c("AIRBUS", "BOEING")) # Filter the data set for Airbus and Boeing
+
+# Using Sting Replace and Remove improve the consistency of values for aircraft_make and aircraft_model so that all models are a single string without additional characters of sub-model descriptors: eg: remove "-200LR", "-300W" 
+seats_tidy$airline_name <- str_replace_all(seats_tidy$airline_name,"-"," ")
+seats_tidy$airline_name <- toupper(seats_tidy$airline_name)
+
+seats_tidy$aircraft_model <- str_replace_all(seats_tidy$aircraft_model,"B","")
+seats_tidy$aircraft_model <- str_replace_all(seats_tidy$aircraft_model,"ER","")
+seats_tidy$aircraft_model <- str_replace_all(seats_tidy$aircraft_model,"LR","")
+seats_tidy$aircraft_model <- str_remove(seats_tidy$aircraft_model, "-.*")
+seats_tidy$aircraft_model <- str_remove(seats_tidy$aircraft_model, "/.*")
+seats_tidy$seat_layout <- str_replace_all(seats_tidy$seat_layout,"-","x")
+
+glimpse(seats_tidy)
+```
+***
+## QUESTION 1: 
+### Which airlines are the most frequently rated and which shows the best Overall Rating performance?
+
+Here the functions group_by, summarise and arrange (Grolemund,Wickham, n.d) have been used.
+
+#### The 12 most frequently rated airlines
+```{r group and summarise}
+by_airline <- seats_tidy %>% group_by(airline_name) %>%
+                             summarise(num_of_reviews = n(),
+                                       mean_overall_rating = mean(overall_rating),
+                                       median_overall_rating = median(overall_rating),
+                                       sdev = sd(overall_rating)) %>% 
+                             filter(num_of_reviews >= 39) %>% 
+                             arrange(desc(num_of_reviews))
+                            
+by_airline
+```
+
+```{r ggplot bar chart}
+by_airline %>% ggplot(aes(x = reorder(airline_name,num_of_reviews), y = num_of_reviews, fill = airline_name))+
+               geom_bar(stat ="identity") +
+               theme_minimal() +
+               theme(axis.text.x=element_text(size=6, hjust=1), 
+                     axis.ticks.x=element_blank(), 
+                     legend.position="none") +
+               scale_fill_brewer(palette = "Paired") +
+               coord_flip() +
+               labs(title = "The 12 Most Frequently Rated Airlines", 
+                    x = "AIRLINE", 
+                    y = "Number of Reviews")
+              
+```
+
+The bar chart displays the twelve airlines with the most reviews (observations) in the data set - all are major names in air travel. 
+
+***
+## QUESTION 2:
+### Distribution of overall rating for top 12 most frequently rated airlines
+```{r ggplot sbs boxplot}
+most_rated_airlines <- seats_tidy %>% filter(airline_name %in% c("AIR FRANCE","AMERICAN AIRLINES","BRITISH AIRWAYS","CATHAY PACIFIC AIRWAYS","EMIRATES","ETIHAD AIRWAYS","LUFTHANSA","QANTAS AIRWAYS","QATAR AIRWAYS","SINGAPORE AIRLINES","VIRGIN ATLANTIC AIRWAYS", "KLM ROYAL DUTCH AIRLINES"))
+
+most_rated_airlines %>% ggplot(aes( x = reorder(airline_name, overall_rating), y = overall_rating, colour = airline_name))+
+                        geom_boxplot() +
+                        geom_jitter(alpha = 0.2) +
+                        facet_wrap(recommended~.) +
+                        theme_minimal() +
+                        theme(axis.text.x=element_blank(), axis.ticks.x=element_blank(), legend.text = element_text(size=6)) +
+                        scale_colour_brewer(palette = "Paired") +
+                        labs(title = "Distribution of Overall Rating by the 12 Most Frequently Rated Airlines", 
+                             subtitle = "0 = Not Recommended, 1 = Recommended",
+                             x = "AIRLINE", 
+                             y = "Overall Rating")
+```
+
+The distribution of the Overall Rating variable is displayed separately for reviews where the passenger recommended or did not recommend the airline seat.
+
+Notably the distribution for airlines Qatar, Qantas  and Cathay Pacific indicates the best performance, in the recommended group, followed by Singapore Airlines with a wider distribution. Other airlines show either wider distribution with some lower scores, or a concentration of lower scores. 
+
+Where the passenger did not recommend their airlines seat experience most airlines have a concentration of ratings below 2.5. The box-plot for Qatar here indicates a better rating result with only some ratings below 2.5 score. Qantas and Singapore show a similar median value to Qatar, with a wider distribution. 
+
+***
+## QUESTION 3:
+### Distribution of Average Category Rating for the 10 most frequently rated airlines
+
+#### Calculate the average (mean) of the Category Rating variables 
+```{r row-wise mutate}
+most_rated_airlines <- most_rated_airlines %>% filter(!is.na(viewing_tv_rating)) %>%
+              rowwise() %>% 
+              mutate(mean_cat_rating = mean(seat_legroom_rating:viewing_tv_rating))
+
+glimpse(most_rated_airlines)
+```
+
+```{r ggplot density}
+
+most_rated_airlines %>% ggplot(aes(mean_cat_rating)) +
+                        geom_density() +
+                        facet_wrap(.~airline_name) +
+                        theme_minimal() +
+                        theme(axis.text.x=element_text(size=6),axis.text.y=element_text(size=6)) +
+                        labs(title = "Density Plot of Average Category Rating for the 12 Most Frequenlty Rated Airlines",
+                             x = "Average Category Rating", 
+                             y = "Density of Average Category Rating")
+               
+```
+
+The density plot of Average Category Rating shows some clear contrasts. American Airlines, Virgin Atlantic, KLM Royal Dutch are all significantly skewed to the lower scores. This indicates that passengers consistently rates these seats with low scores out of five. Meanwhile Qatar, Singapore, Cathy and Qantas have high densities of higher scores and a clearly skewed in the opposite direction. The remaining airlines are more evenly distributed or peak in the middle range of scores. The difference in passenger experience and review score is very evident when comparing American Airlines to Qatar Airways. 
+
+
+```{r ggplot sbs boxplot2}
+most_rated_airlines %>% ggplot(aes( x = airline_name, y = mean_cat_rating, color = airline_name))+
+                        geom_boxplot() +
+                        geom_jitter(alpha = 0.2) +
+                        theme_minimal() +
+                        theme(axis.text.x=element_blank(), axis.ticks.x=element_blank(), legend.text = element_text(size=6)) +
+                        scale_color_brewer(palette = "Paired") +
+                        labs(title = "Distribution of Average Category Rating by Most Frequently Rated Airlines", 
+                             x = "AIRLINE",
+                             y = "Mean of the 5 Category Ratings")
+```
+
+This box plot is an alternative visualisation the density plot above. The contrast between Qatar and Virgin Atlantic is evident - the inter-quartile range indicates that 50% of Qatar scores are concentrated between 3.5 to 5.0; while Virgin Atlantic has a median of 2.0, indicating 50% of scores are below this value.  
+
+***
+## QUESTION 4:
+### Distribtution of Overall Rating variable by Aircraft Make
+```{r ggplot sbs boxplot3}
+seats_tidy %>% ggplot(aes( x = aircraft_make, y = overall_rating))+
+               geom_boxplot() +
+               geom_jitter(alpha = 0.1) +
+               theme_minimal() +
+               labs(title = "Distribution of Overall Rating: AIRBUS v BOEING", 
+                    x = "AIRCRAFT MAKE", 
+                    y = "Overall Rating")
+```
+
+This side-by-side box plot indicates some differences between the seat reviews of the two major aircraft manufacturers. Airbus has a slightly higher median score value and a more even distribution compared to Boeing. The plot for Boeing indicates that nearly 50% of all scores are below 2.5 and the jittered data shows a concentration of points at very low scores. 
+
+***
+## QUESTION 5:
+### Distribtution of Overall Rating variable by Aircraft Model
+```{r ggplot sbs boxplot4}
+seats_tidy %>% filter(aircraft_model %in% c("737","747","757","767","777","787","A319","A320","A321","A330","A340","A380")) %>%
+               ggplot(aes( x = aircraft_model, y = overall_rating, group = aircraft_model))+
+               geom_boxplot() +
+               geom_jitter(alpha = 0.1) +
+               theme_minimal() +
+               labs(title = "Distribution of Overall Rating by Aircraft Model", 
+                    x = "AIRCRAFT MODEL", 
+                    y = "Overall Rating")
+```
+
+This series of side-by-side boxplots show significant differences in the distribution of Overall Rating by aircraft type. The Boeing 757 show the worst performance in Overall Rating by passengers with the majority of very low scores. The Boeing 767, Airbus A319 and A340 have low median scores and a concentration of low scores. However, the A319 and A320 results may not be statistically significant when compared to the number of results for other aircraft types. The jittered data indicates the number of scores for the Boeing 777 and 747 are far greater. Notably the Airbus A330 and A380 have similar median values, both higher than the 777, however the jittered data indicates fewer results (reviews) for these types. 
+
+***
+## QUESTION 6:
+### Can a relationship between the some of the Average Categrory Ratings predict the Overall Rating of a seat for an airline?
+
+#### Calculate the average (mean) of the Overall Rating variable and each Category Rating variable for each airline 
+
+```{r}
+all_airlines_summary <- seats_tidy %>% group_by(airline_name) %>%
+                        summarise(av_overall_rating = mean(overall_rating, na.rm = TRUE),
+                                  av_legroom= mean(seat_legroom_rating, na.rm = TRUE),
+                                  av_recline = mean(seat_recline_rating, na.rm = TRUE),
+                                  av_width = mean(seat_width_rating, na.rm = TRUE),
+                                  av_aspace = mean(aisle_space_rating, na.rm = TRUE),
+                                  av_tv = mean(viewing_tv_rating, na.rm = TRUE)) %>%
+                        arrange(desc(av_overall_rating))
+                        
+all_airlines_summary     
+``` 
+
+#### Plot a linear model of each Average Category Rating variable against the Average Overall Rating variable
+```{r}
+lm1 <- all_airlines_summary %>% ggplot(aes(x = av_legroom, y = av_overall_rating)) +
+                                geom_point() +
+                                geom_smooth(method = "lm", se=FALSE) +
+                                theme_minimal() +
+                                theme(axis.text.x=element_text(size=8),axis.text.y=element_text(size=8)) +
+                                labs( x = "Average Legroom Rating", y = "Average Overall Rating")
+
+lm2 <- all_airlines_summary %>% ggplot(aes(x = av_recline, y = av_overall_rating)) +
+                                geom_point() +
+                                geom_smooth(method = "lm", se=FALSE) +
+                                theme_minimal() +
+                                theme(axis.text.x=element_text(size=8),axis.text.y=element_text(size=8)) +
+                                labs( x = "Average Seat Recline Rating", y = NULL)
+
+lm3 <- all_airlines_summary %>% ggplot(aes(x = av_width, y = av_overall_rating)) +
+                                geom_point() +
+                                geom_smooth(method = "lm", se=FALSE) +
+                                theme_minimal() +
+                                theme(axis.text.x=element_text(size=8),axis.text.y=element_text(size=8)) +
+                                labs( x = "Average Seat Width Rating", y = NULL)
+
+lm4 <- all_airlines_summary %>% ggplot(aes(x = av_aspace, y = av_overall_rating)) +
+                                geom_point() +
+                                geom_smooth(method = "lm", se=FALSE) +
+                                theme_minimal() +
+                                theme(axis.text.x=element_text(size=8),axis.text.y=element_text(size=8)) +
+                                labs( x = "Average Aisle Space Rating", y = "Average Overall Rating")
+
+lm5 <- all_airlines_summary %>% ggplot(aes(x = av_tv, y = av_overall_rating)) +
+                                geom_point() +
+                                geom_smooth(method = "lm", se=FALSE) +
+                                theme_minimal() +
+                                theme(axis.text.x=element_text(size=8),axis.text.y=element_text(size=8)) +
+                                labs( x = "Average Viewing TV Rating", y = NULL)
+
+grid.arrange(lm1, lm2, lm3,lm4,lm5, ncol=3)
+```
+
+#### Calculate the Correlation Coefficient between each average category variable and the Average Overall Rating variable
+```{r}
+all_airlines_summary %>% summarise(cor(av_legroom, av_overall_rating),
+                                   cor(av_recline, av_overall_rating),
+                                   cor(av_width, av_overall_rating),
+                                   cor(av_aspace, av_overall_rating)) %>%
+                                   gather("Variables","Correlation Coeff")
+```
+
+Examining the linear model plots shows a positive correlation between each Average Category Rating variable and the Average Overall Rating. This suggests that passengers overall judgment of the airline seat is in accordance with their rating of the categories. It is clear that Average TV Viewing Rating has the weakest correlation. The highest correlation coefficients are between Overall Rating and Average Aisle Space and Average Seat Recline - arguably both key in airline seat comfort. 
+
+Three models have been considered to understand if the one or two Average Category Ratings variables can account for the variation in Average Overall Rating and predict its value.
+
+#### Model 1: a single variable model considering Average Aisle Space Rating variable
+
+This model was chosen as the Average Aisle Space Rating variable has the strongest correlation with Average Overall Rating 
+
+$$av.overall.rating = \beta_0 + \beta_1 av.aspace + \varepsilon$$
+
+```{r}
+overall_model_1 <- lm(av_overall_rating ~ av_aspace, data = all_airlines_summary)
+
+summary(overall_model_1)
+tidy(overall_model_1)
+glance(overall_model_1)
+```
+
+#### Model 2: an interaction beween the Average Aisle Space and Average Seat Recline ratings
+
+This model introduces a second independent variable - Average Seat Recline.
+
+$$av.overall.rating = \beta_0 + \beta_1 av.aspace * \beta_2 av.recline + \varepsilon$$
+```{r}
+overall_model_2 <- lm(av_overall_rating ~ av_aspace * av_recline, data = all_airlines_summary)
+
+summary(overall_model_2)
+tidy(overall_model_2)
+glance(overall_model_2)
+```
+
+#### Model 3: an interaction between average aisle space, average seat recline and average seat width ratings
+
+$$av.overall.rating = \beta_0 + \beta_1 av.aspace * \beta_2 av.recline * \beta_3 av.width + \varepsilon$$
+
+```{r}
+overall_model_3 <- lm(av_overall_rating ~ av_aspace * av_recline * av_width, data = all_airlines_summary)
+
+summary(overall_model_3)
+tidy(overall_model_3)
+glance(overall_model_3)
+```
+
+
+Model 2 is an improvement on Model 1 - the adjusted R-Squared value has increased and the value of BIC has decreased (Monash University, 2020). This indicates that Model 2 is a better fit, explaining 79.9% of the variation in the Average Overall Score. In Model 3 adding an additional independent variable has increased the value of R-Squared, however the value of BIC is greater than for Model 2. Therefore Model 2 is the preferred model (Monash University, 2020). 
+
+#### Using Model 2 to predict the Average Overall Score
+
+$$\widehat{av.overall.rating} =  1.096 av.aspace * 0.785 av.recline - 1.349$$
+```{r}
+overall_model_2_augm <- augment(overall_model_2, all_airlines_summary) #Using augment to obtain fitted values and residuals
+overall_model_2_augm
+```
+
+
+Consider the values, predicted by the fitted model, for Average Overall Rating for Qatar Airways - the Airlines with the highest and lowest Average Overall Rating from the 12 Most Frequently Rated Airlines respectively. 
+
+Qatar Airways has an Average Overall Rating of 7.467 and a fitted value of 7.359. Therefore a residual of 0.107
+
+American Airlines has an Average Overall Rating of 2.318 and a fitted value of 2.607. Therefore a residual of -0.283
+
+Overall, it can be seen that Model 2 gives very reasonable predictions for Average Overall Rating for an airline seat. 
+
+***
+# __SUMMARY OF RESULTS__
+The analysis and visualisations of the airline passenger seat reviews has shown a significant variation in the Overall Rating performance for the twelve most frequently rated Airlines for Question 1. Nine of these airlines had an Average Overall Rating below 5.0. Qatar Airways had the highest Average Overall Rating. 
+
+The side-by-side box plots and density plots displayed the results for Question 2 and 3. The performance of each airline in terms of passenger seat review varies considerably.  American Airlines, Virgin Atlantic, KLM Royal Dutch are all significantly skewed to the lower scores. This indicates that passengers consistently rates these seats with low scores out of five. Meanwhile Qatar, Singapore, Cathy and Qantas have high densities of higher scores demonstrated scores suggesting a very different passenger seat experience to the other airlines in the group of twelve most rated. 
+
+Question 4 and 5 were visualised using side-by-side box plots. In summary, Airbus showed a slightly higher median score value and a more even distribution compared to Boeing. In terms of Aircraft Models the box plots revealed the Boeing 747 and 777; and Airbus A330 and A380 as distinctly different from the lowest distributions seen for the A319, A320, 757 and 767. The application of jittered data showed significant differences in the number of results for different Aircraft Models. In summary the Boeing 777 was a clear stand-out with respect the number of data points and the distribution. 
+
+In response to Question 6 three models were considered and Model 2 was selected as the preferred model. Model 2 accounted for 79.9% of the variation in Average Overall Rating using two independent variables and had a lower BIC that Model 3. Augmenting the fitted showed the model gave very reasonable predictions of Average Overall Rating. This indicates that Aisle Space and Seat Recline are very important to airline passengers and how they rate their seat experience. 
+
+***
+# __CONCLUSION__
+This report aimed to answer six questions relating to the SkyTrax airline passenger seat reviews data. A tidy data set of 1,226 observations across 14 variables was used to visualise and model responses to the questions. Overall, the performance of the most frequently rated airlines was shown to vary considerably. The methods and visual plots used in response to each question allowed for some discussion in relation to each question. Moreover, average passenger ratings across key categories were shown to strongly correlate with the average overall seat rating of the airline seat. A simple linear model with two independent variables was shown to predict the average overall rating. 
+
+***
+# __REFERENCES__
+
+Chang, Winston., Dunnington,Dewey., Henry, Lionel., Pedersen, Thomas Lin., Takahashi, Kohske Wickham,Hadley., Wilke,Claus., Woo,Kara., Yutani, Hiroaki. (n.d). ggplot2: part of the tidyverse.
+Retrieved from https://ggplot2.tidyverse.org/reference/index.html
+
+Grolemund, Garrett., Wickham, Hadley. (n.d). R for Data Science.
+Retrieved from https://r4ds.had.co.nz
+
+Hayes, Alex. (2020). broom: Convert Statistical Objects into Tidy Tibbles.
+Retrieved from https://CRAN.R-project.org/package=broom
+
+Monash University. (2020). Goodness of fit.
+Retrieved from https://www.futurelearn.com/courses/data-science-modelling-and-visualisation/4/steps/869615
+
+SkyTrax. (n.d). Our Background.
+Retrieved from https://www.airlinequality.com/about-us/
+
+Skytrax User Reviews Dataset. (2015).
+Retrieved from https://github.com/quankiquanki/skytrax-reviews-dataset
+
+Tierney, Nicholas. (2019). Using Visdat.
+Retrieved from https://cran.r-project.org/web/packages/visdat/vignettes/using_visdat.html
+
+Wickham, Hadley., François, Romain.,Henry, Lionel., Müller, Kirill. (n.d). Row-wise Operations.
+Retrieved from https://dplyr.tidyverse.org/articles/rowwise.html
+ 
+Wickham, Hadley.(2019). Remove Matched Patterns In A String.
+Retrieved from https://www.rdocumentation.org/packages/stringr/versions/1.4.0/topics/str_remove
+
+Wickham, Hadley.(2019). Replace Matched Patterns In A String.
+Retrieved from https://www.rdocumentation.org/packages/stringr/versions/1.4.0/topics/str_replace
+
+Wickham, Hadley., François, Romain.,  Henry, Lionel., Müller, Kirill. (n.d). Vectorised If.
+Retrieved from https://dplyr.tidyverse.org/reference/if_else.html
+
+Xie, Yihui., Allaire, J.J., Grolemund, Garrett. (2020). R Markdown: The Definitive Guide.
+Retrieved from https://bookdown.org/yihui/rmarkdown/html-document.html
+
+
+
