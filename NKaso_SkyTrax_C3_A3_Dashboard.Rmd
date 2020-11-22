@@ -4,7 +4,9 @@ author: "Noel Kaso"
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows
+    horizontal layout: fill
     theme: paper
+    runtime: shiny 
 ---
 
 ```{r setup, include=FALSE}
@@ -58,7 +60,8 @@ by_airline <- seats_tidy %>% group_by(airline_name) %>%
                              filter(num_of_reviews >= 39) %>% 
                              arrange(desc(num_of_reviews))
 
-most_rated_airlines <- seats_tidy %>% filter(airline_name %in% c("AIR FRANCE","AMERICAN AIRLINES","BRITISH AIRWAYS","CATHAY PACIFIC AIRWAYS","EMIRATES","ETIHAD AIRWAYS","LUFTHANSA","QANTAS AIRWAYS","QATAR AIRWAYS","SINGAPORE AIRLINES","VIRGIN ATLANTIC AIRWAYS", "KLM ROYAL DUTCH AIRLINES")) %>%     
+most_rated_airlines <- seats_tidy %>% filter(airline_name %in% c("AIR FRANCE","AMERICAN AIRLINES","BRITISH AIRWAYS","CATHAY PACIFIC AIRWAYS","EMIRATES","ETIHAD AIRWAYS","LUFTHANSA","QANTAS AIRWAYS","QATAR AIRWAYS","SINGAPORE AIRLINES","VIRGIN ATLANTIC AIRWAYS", "KLM ROYAL DUTCH AIRLINES")) %>%
+                      filter(aircraft_model %in% c("737","747","757","767","777","787","A319","A320","A321","A330","A340","A380")) %>%
                       filter(!is.na(viewing_tv_rating)) %>%
                       rowwise() %>% 
                       mutate(mean_cat_rating = mean(seat_legroom_rating:viewing_tv_rating))
@@ -76,29 +79,40 @@ all_airlines_summary <- seats_tidy %>% group_by(airline_name) %>%
 VISUALISATIONS
 =======================
 
+User Inputs {.sidebar}
+-----------------------------------------------------------------------
+
+```{r}
+selectInput('xcol', 'Group by Airline Name or Aircraft Model', c("airline_name","aircraft_model"))
+    
+selectInput('ycol', 'Select Overall Rating or a Sub-Category Seat Rating to examine', c("overall_rating", "seat_legroom_rating", "seat_recline_rating", "seat_width_rating","aisle_space_rating"))
+
+```
+
+Row {data-height=50}
+-----------------------------------------------------------------------
+Explore insights on airline seats from passenger reviews posted online to the independent customer forum [SkyTrax](https://www.airlinequality.com) (SkyTrax, n.d). by travellers worldwide. The [User Instructions] tab gives you more information on using this dashboard. 
+
 Row
 -----------------------------------------------------------------------
 
 ### Overall Seat Rating
-```{r}
-aircraft_model_ui <- c("737","747","757","767","777","787","A319","A320","A321","A330","A340","A380")
+```{r sbs boxplot1, out.width="100%"}
 
-airline_name_ui <- c("AIR FRANCE","AMERICAN AIRLINES","BRITISH AIRWAYS","CATHAY PACIFIC AIRWAYS","EMIRATES","ETIHAD AIRWAYS","LUFTHANSA","QANTAS AIRWAYS","QATAR AIRWAYS","SINGAPORE AIRLINES","VIRGIN ATLANTIC AIRWAYS", "KLM ROYAL DUTCH AIRLINES")
-
-seats_tidy %>% filter(airline_name %in% airline_name_ui) %>%
-               ggplot(aes( x = airline_name, y = overall_rating, group = airline_name))+
-               geom_boxplot() +
-               geom_jitter(alpha = 0.1) +
-               theme_minimal() +
-               labs(title = "Distribution of Overall Rating by Aircraft Model", 
-                    x = "AIRCRAFT MODEL", 
-                    y = "Overall Rating")
+most_rated_airlines %>% ggplot(aes( x = airline_name, y = overall_rating, group = airline_name))+
+                        geom_boxplot() +
+                        geom_jitter(alpha = 0.1) +
+                        theme_minimal() +
+                        labs(title = "Distribution of Overall Rating by Aircraft Model", 
+                        x = "AIRCRAFT MODEL", 
+                        y = "Overall Rating")
+               
 ```
 
 
 ### The 12 Most Rated Airlines
 
-```{r}
+```{r bar chart, out.width="100%"}
 by_airline %>% ggplot(aes(x = reorder(airline_name,num_of_reviews), y = num_of_reviews, fill = airline_name))+
                geom_bar(stat ="identity") +
                theme_minimal() +
@@ -117,7 +131,7 @@ Row
 
 ### Overall Seat Rating: Boeing v Airbus
 
-```{r}
+```{r sbs boxplot2, out.width="100%"}
 seats_tidy %>% ggplot(aes( x = aircraft_make, y = overall_rating))+
                geom_boxplot() +
                geom_jitter(alpha = 0.1) +
@@ -128,7 +142,7 @@ seats_tidy %>% ggplot(aes( x = aircraft_make, y = overall_rating))+
 ```
 
 ### Distribution of Average Seat Category Rating
-```{r}
+```{r density plot, out.width="100%"}
 most_rated_airlines %>% ggplot(aes(mean_cat_rating)) +
                         geom_density() +
                         facet_wrap(.~airline_name) +
@@ -141,6 +155,10 @@ most_rated_airlines %>% ggplot(aes(mean_cat_rating)) +
 
 PREDICTIONS
 =======================
+
+Predicting the Average Overall Rating for an airline seat:
+
+A linear model with an interaction between Average Aisle Space Rating and Average Seat Recline rating is presented here. This model explains 79.9% of the variation in the Average Overall Score.
 
 $$av.overall.rating = \beta_0 + \beta_1 av.aspace * \beta_2 av.recline + \varepsilon$$
 $$\widehat{av.overall.rating} =  1.096 av.aspace * 0.785 av.recline - 1.349$$
