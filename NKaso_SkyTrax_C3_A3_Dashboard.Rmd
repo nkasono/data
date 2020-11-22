@@ -1,0 +1,226 @@
+---
+title: "__SkyTrax: Passenger Reviews of Airline Seats__"
+author: "Noel Kaso"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+    theme: paper
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(visdat)
+library(gridExtra)
+library(broom)
+library(shiny)
+```
+
+```{r data, include=FALSE}
+
+# Read the CSV data
+seats <- read_csv("https://raw.githubusercontent.com/quankiquanki/skytrax-reviews-dataset/master/data/seat.csv")
+
+# Define the set of aircraft models where aircraft_make = Airbus
+airbus_mods <- c("A300", "A310-300","A319","A320","A321", "A320-200","A330","A330-200","A330-300","A340","A340-300","A340-500","A340-600","A380", "A380-800","A300-600", "A321/A320", "Airbus","AIRBIS")
+
+# Define the set of aircraft models where aircraft_make = Boeing
+boeing_mods <- c("B737-900", "B767", "B767-300", "B777", "B777-200", "B777-200LR", "B777-200ER", "B777-300", "B777-300ER", "B777-300", "B757-200", "B747-300", "Boeing747", "B777-300ER", "B747-400", "B757", "B757-200","B777-300W", "Boeing")
+
+seats_tidy <- seats %>% 
+# Create a tidy data set with only the relevant variables (columns)
+              select(-link, -title, -author, -date_flown, -type_traveller, -content, -power_supply_rating, -seat_storage_rating) %>%
+# Create two new variables using the Separate function (Grolemund,Wickham, n.d). and then using the Mutate function (Grolemund,Wickham, n.d) improve the consistency of    values for aircraft_make and aircraft_model variable Aircraft was split into Aircraft Make and Aircraft Model 
+              separate(col = "aircraft", c("aircraft_make", "aircraft_model"), sep = " ") %>%
+              mutate(aircraft_model = ifelse(is.na(aircraft_model), aircraft_make, aircraft_model)) %>%
+# Using mutate and if_else functions (Wickham,François,Henry,Müller, n.d). replace missing aircraft_models with the value from aircraft_make
+              mutate(aircraft_make = ifelse(aircraft_make %in% airbus_mods, "AIRBUS", aircraft_make)) %>%
+              mutate(aircraft_make = ifelse(aircraft_make %in% boeing_mods, "BOEING", aircraft_make)) %>%
+# Filter the data set for Airbus and Boeing
+              filter(aircraft_make %in% c("AIRBUS", "BOEING")) 
+
+# Using Sting Replace and Remove (Wickham,2019) improve the consistency of values for aircraft_make and aircraft_model so that all models are a single string without additional characters of sub-model descriptors: eg: remove "-200LR", "-300W" 
+seats_tidy$airline_name <- str_replace_all(seats_tidy$airline_name,"-"," ")
+seats_tidy$airline_name <- toupper(seats_tidy$airline_name)
+
+seats_tidy$aircraft_model <- str_replace_all(seats_tidy$aircraft_model,"B","")
+seats_tidy$aircraft_model <- str_replace_all(seats_tidy$aircraft_model,"ER","")
+seats_tidy$aircraft_model <- str_replace_all(seats_tidy$aircraft_model,"LR","")
+seats_tidy$aircraft_model <- str_remove(seats_tidy$aircraft_model, "-.*")
+seats_tidy$aircraft_model <- str_remove(seats_tidy$aircraft_model, "/.*")
+seats_tidy$seat_layout <- str_replace_all(seats_tidy$seat_layout,"-","x")
+
+by_airline <- seats_tidy %>% group_by(airline_name) %>%
+                             summarise(num_of_reviews = n(),
+                                       mean_overall_rating = mean(overall_rating),
+                                       median_overall_rating = median(overall_rating),
+                                       sdev = sd(overall_rating)) %>% 
+                             filter(num_of_reviews >= 39) %>% 
+                             arrange(desc(num_of_reviews))
+
+most_rated_airlines <- seats_tidy %>% filter(airline_name %in% c("AIR FRANCE","AMERICAN AIRLINES","BRITISH AIRWAYS","CATHAY PACIFIC AIRWAYS","EMIRATES","ETIHAD AIRWAYS","LUFTHANSA","QANTAS AIRWAYS","QATAR AIRWAYS","SINGAPORE AIRLINES","VIRGIN ATLANTIC AIRWAYS", "KLM ROYAL DUTCH AIRLINES")) %>%     
+                      filter(!is.na(viewing_tv_rating)) %>%
+                      rowwise() %>% 
+                      mutate(mean_cat_rating = mean(seat_legroom_rating:viewing_tv_rating))
+
+all_airlines_summary <- seats_tidy %>% group_by(airline_name) %>%
+                        summarise(av_overall_rating = mean(overall_rating, na.rm = TRUE),
+                                  av_legroom= mean(seat_legroom_rating, na.rm = TRUE),
+                                  av_recline = mean(seat_recline_rating, na.rm = TRUE),
+                                  av_width = mean(seat_width_rating, na.rm = TRUE),
+                                  av_aspace = mean(aisle_space_rating, na.rm = TRUE),
+                                  av_tv = mean(viewing_tv_rating, na.rm = TRUE)) %>%
+                        arrange(desc(av_overall_rating))
+```
+
+VISUALISATIONS
+=======================
+
+Row {data-width=750}
+-----------------------------------------------------------------------
+
+### Overall Seat Rating
+
+```{r}
+seats_tidy %>% filter(aircraft_model %in% c("737","747","757","767","777","787","A319","A320","A321","A330","A340","A380")) %>%
+               ggplot(aes( x = aircraft_model, y = overall_rating, group = aircraft_model))+
+               geom_boxplot() +
+               geom_jitter(alpha = 0.1) +
+               theme_minimal() +
+               labs(title = "Distribution of Overall Rating by Aircraft Model", 
+                    x = "AIRCRAFT MODEL", 
+                    y = "Overall Rating")
+```
+
+Row
+-----------------------------------------------------------------------
+
+### The 12 Most Rated Airlines
+
+```{r}
+by_airline %>% ggplot(aes(x = reorder(airline_name,num_of_reviews), y = num_of_reviews, fill = airline_name))+
+               geom_bar(stat ="identity") +
+               theme_minimal() +
+               theme(axis.text.x=element_text(size=6, hjust=1), 
+                     axis.ticks.x=element_blank(), 
+                     legend.position="none") +
+               scale_fill_brewer(palette = "Paired") +
+               coord_flip() +
+               labs(title = "The 12 Most Frequently Rated Airlines", 
+                    x = "AIRLINE", 
+                    y = "Number of Reviews")
+```
+
+### Overall Rating: Boeing v Airbus
+
+```{r}
+seats_tidy %>% ggplot(aes( x = aircraft_make, y = overall_rating))+
+               geom_boxplot() +
+               geom_jitter(alpha = 0.1) +
+               theme_minimal() +
+               labs(title = "Distribution of Overall Rating: AIRBUS v BOEING", 
+                    x = "AIRCRAFT MAKE", 
+                    y = "Overall Rating")
+```
+
+### Distribution of Average Seat Category Rating
+```{r}
+most_rated_airlines %>% ggplot(aes(mean_cat_rating)) +
+                        geom_density() +
+                        facet_wrap(.~airline_name) +
+                        theme_minimal() +
+                        theme(axis.text.x=element_text(size=6),axis.text.y=element_text(size=6)) +
+                        labs(title = "Density Plot of Average Category Rating for the 12 Most Frequenlty Rated Airlines",
+                             x = "Average Category Rating", 
+                             y = "Density of Average Category Rating")
+```
+
+
+DESCRIPTION and METHODOLOGY {data-orientation=columns}
+=======================
+
+### Introduction
+The [SkyTrax](https://www.airlinequality.com) website allows passengers to review many aspects of air travel, originally created as an independent customer forum, it has become a leading review site for airlines, airports and associated reviews (SkyTrax, n.d).
+
+This report considers passenger airline seat reviews and seeks to answer a series of questions about these reviews with respect to the major airlines and aircraft types. Moreover, it is interesting to explore whether passenger ratings across a number of sub-criteria, or categories, correlate with their overall rating of the airline seat. There maybe a category rating that closely aligns with the overall rating and this might offer insights into the factors that determine a passenger review rating. 
+
+
+### The Questions
+1. | Which airlines are the most frequently rated and which shows the best Overall Rating performance?
+2. | How does the variable Overall Rating vary amoungst the most frequently rated airlines?
+3. | How is the average of the Category Ratings distributed across the most frequently rated airlines?
+4. | How does Overall Rating vary between the major aircraft makes: Boeing and Airbus?
+5. | Which aircraft models show the best Overall Rating results?
+6. | What relationship exists between the Average Overall Rating and the Average Category Ratings and can the Average Overall Rating be predicted by one of more of these variables?
+
+
+### Expalation of the Data Set
+The data set considered contains airlines passenger reviews of aircraft seats. The data was scraped in 2015 from [SkyTrax](https://www.airlinequality.com). The set contains 1,258 reviews (observations) comprising 21 variables, including the passenger rating of the airline seat overall (score out of 10) and a rating over a number of categories (score out of 5). These ratings are referred to here as the Category Ratings and cover: seat legroom, width, recline, aisle space, viewing tv, power supply and seat storage. The airline name, aircraft make and model are also captured. Whether the passenger would recommend the airline seat, or not, is captured in the variable Recommended as numeric indicator. 
+
+Data privacy and ethical considerations are stated under [DISCLAIMER].
+
+### Missing Values in the Data
+Four variables exhibited a degree of missingness (Tierney, 2019) greater than 90% and these were excluded from the analysis. Passenger reviews where the category rating variable Viewing TV Rating was missing occurred to a low degree, therefore these observations were removed from analysis. Overall the most relevant variables are 100% present in the data set.
+
+### Data Cleaning Procedure
+Variables relevant to the questions were included in the tidy data using the Select (Grolemund,Wickham, n.d) function - this allowed for focus on the variables relevant to the questions posed. 
+
+The variable Aircraft was split into Aircraft Make and Aircraft Model using the Separate function (Grolemund,Wickham, n.d). The consistency of the values stored in these two new variables was improved using three Mutate (Grolemund,Wickham, n.d) operations with if_else functions (Wickham,François,Henry,Müller, n.d). String Replace and Remove (Wickham,2019) allowed for the values in the new variables to be improved. Filtering (Grolemund,Wickham, n.d) was applied to the Aircraft Make variable as the questions posed relate to Boeing and Airbus. 
+
+The tidied data set contains 1,226 observations across 14 variables relevant to the questions posed. 
+
+
+USER INSTRUCTIONS
+=======================
+
+
+DISCLAIMER
+=======================
+
+The [SkyTrax](https://www.airlinequality.com) website allows passengers to review many aspects of air travel. The was originally created as an independent customer forum, it has become a leading review site for airlines, airports and associated reviews (SkyTrax, n.d).
+
+The passenger reviews are publicly available on the website and no personal identity details are included in the data set. Therefore, there are no specific privacy or ethical concerns - opinions expressed are those of the passenger submitting the review and are not validated. 
+
+All materials referenced are listed on the [REFERENCES] page.
+
+REFERENCES
+=======================
+
+Chang, Winston., Dunnington,Dewey., Henry, Lionel., Pedersen, Thomas Lin., Takahashi, Kohske Wickham,Hadley., Wilke,Claus., Woo,Kara., Yutani, Hiroaki. (n.d). ggplot2: part of the tidyverse.
+Retrieved from https://ggplot2.tidyverse.org/reference/index.html
+
+Grolemund, Garrett., Wickham, Hadley. (n.d). R for Data Science.
+Retrieved from https://r4ds.had.co.nz
+
+Hayes, Alex. (2020). broom: Convert Statistical Objects into Tidy Tibbles.
+Retrieved from https://CRAN.R-project.org/package=broom
+
+Monash University. (2020). Goodness of fit.
+Retrieved from https://www.futurelearn.com/courses/data-science-modelling-and-visualisation/4/steps/869615
+
+SkyTrax. (n.d). Our Background.
+Retrieved from https://www.airlinequality.com/about-us/
+
+Skytrax User Reviews Dataset. (2015).
+Retrieved from https://github.com/quankiquanki/skytrax-reviews-dataset
+
+Tierney, Nicholas. (2019). Using Visdat.
+Retrieved from https://cran.r-project.org/web/packages/visdat/vignettes/using_visdat.html
+
+Wickham, Hadley., François, Romain.,Henry, Lionel., Müller, Kirill. (n.d). Row-wise Operations.
+Retrieved from https://dplyr.tidyverse.org/articles/rowwise.html
+ 
+Wickham, Hadley.(2019). Remove Matched Patterns In A String.
+Retrieved from https://www.rdocumentation.org/packages/stringr/versions/1.4.0/topics/str_remove
+
+Wickham, Hadley.(2019). Replace Matched Patterns In A String.
+Retrieved from https://www.rdocumentation.org/packages/stringr/versions/1.4.0/topics/str_replace
+
+Wickham, Hadley., François, Romain.,  Henry, Lionel., Müller, Kirill. (n.d). Vectorised If.
+Retrieved from https://dplyr.tidyverse.org/reference/if_else.html
+
+Xie, Yihui., Allaire, J.J., Grolemund, Garrett. (2020). R Markdown: The Definitive Guide.
+Retrieved from https://bookdown.org/yihui/rmarkdown/html-document.html
+
+https://rmarkdown.rstudio.com/flexdashboard/index.html
