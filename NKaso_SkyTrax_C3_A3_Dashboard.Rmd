@@ -4,7 +4,6 @@ author: "Noel Kaso"
 output: 
   flexdashboard::flex_dashboard:
     orientation: rows
-    vertical_layout: fill
     theme: paper
 ---
 
@@ -77,14 +76,17 @@ all_airlines_summary <- seats_tidy %>% group_by(airline_name) %>%
 VISUALISATIONS
 =======================
 
-Row {data-width=750}
+Row
 -----------------------------------------------------------------------
 
 ### Overall Seat Rating
-
 ```{r}
-seats_tidy %>% filter(aircraft_model %in% c("737","747","757","767","777","787","A319","A320","A321","A330","A340","A380")) %>%
-               ggplot(aes( x = aircraft_model, y = overall_rating, group = aircraft_model))+
+aircraft_model_ui <- c("737","747","757","767","777","787","A319","A320","A321","A330","A340","A380")
+
+airline_name_ui <- c("AIR FRANCE","AMERICAN AIRLINES","BRITISH AIRWAYS","CATHAY PACIFIC AIRWAYS","EMIRATES","ETIHAD AIRWAYS","LUFTHANSA","QANTAS AIRWAYS","QATAR AIRWAYS","SINGAPORE AIRLINES","VIRGIN ATLANTIC AIRWAYS", "KLM ROYAL DUTCH AIRLINES")
+
+seats_tidy %>% filter(airline_name %in% airline_name_ui) %>%
+               ggplot(aes( x = airline_name, y = overall_rating, group = airline_name))+
                geom_boxplot() +
                geom_jitter(alpha = 0.1) +
                theme_minimal() +
@@ -93,8 +95,6 @@ seats_tidy %>% filter(aircraft_model %in% c("737","747","757","767","777","787",
                     y = "Overall Rating")
 ```
 
-Row
------------------------------------------------------------------------
 
 ### The 12 Most Rated Airlines
 
@@ -112,7 +112,10 @@ by_airline %>% ggplot(aes(x = reorder(airline_name,num_of_reviews), y = num_of_r
                     y = "Number of Reviews")
 ```
 
-### Overall Rating: Boeing v Airbus
+Row
+-----------------------------------------------------------------------
+
+### Overall Seat Rating: Boeing v Airbus
 
 ```{r}
 seats_tidy %>% ggplot(aes( x = aircraft_make, y = overall_rating))+
@@ -136,16 +139,25 @@ most_rated_airlines %>% ggplot(aes(mean_cat_rating)) +
                              y = "Density of Average Category Rating")
 ```
 
-
-DESCRIPTION and METHODOLOGY {data-orientation=columns}
+PREDICTIONS
 =======================
 
+$$av.overall.rating = \beta_0 + \beta_1 av.aspace * \beta_2 av.recline + \varepsilon$$
+$$\widehat{av.overall.rating} =  1.096 av.aspace * 0.785 av.recline - 1.349$$
+
+
+DESCRIPTION and METHODOLOGY
+=======================
+
+Row
+-----------------------------------------------------------------------
 ### Introduction
 The [SkyTrax](https://www.airlinequality.com) website allows passengers to review many aspects of air travel, originally created as an independent customer forum, it has become a leading review site for airlines, airports and associated reviews (SkyTrax, n.d).
 
 This report considers passenger airline seat reviews and seeks to answer a series of questions about these reviews with respect to the major airlines and aircraft types. Moreover, it is interesting to explore whether passenger ratings across a number of sub-criteria, or categories, correlate with their overall rating of the airline seat. There maybe a category rating that closely aligns with the overall rating and this might offer insights into the factors that determine a passenger review rating. 
 
-
+Row
+-----------------------------------------------------------------------
 ### The Questions
 1. | Which airlines are the most frequently rated and which shows the best Overall Rating performance?
 2. | How does the variable Overall Rating vary amoungst the most frequently rated airlines?
@@ -154,15 +166,20 @@ This report considers passenger airline seat reviews and seeks to answer a serie
 5. | Which aircraft models show the best Overall Rating results?
 6. | What relationship exists between the Average Overall Rating and the Average Category Ratings and can the Average Overall Rating be predicted by one of more of these variables?
 
-
+Row
+-----------------------------------------------------------------------
 ### Expalation of the Data Set
 The data set considered contains airlines passenger reviews of aircraft seats. The data was scraped in 2015 from [SkyTrax](https://www.airlinequality.com). The set contains 1,258 reviews (observations) comprising 21 variables, including the passenger rating of the airline seat overall (score out of 10) and a rating over a number of categories (score out of 5). These ratings are referred to here as the Category Ratings and cover: seat legroom, width, recline, aisle space, viewing tv, power supply and seat storage. The airline name, aircraft make and model are also captured. Whether the passenger would recommend the airline seat, or not, is captured in the variable Recommended as numeric indicator. 
 
 Data privacy and ethical considerations are stated under [DISCLAIMER].
 
+Row
+-----------------------------------------------------------------------
 ### Missing Values in the Data
 Four variables exhibited a degree of missingness (Tierney, 2019) greater than 90% and these were excluded from the analysis. Passenger reviews where the category rating variable Viewing TV Rating was missing occurred to a low degree, therefore these observations were removed from analysis. Overall the most relevant variables are 100% present in the data set.
 
+Row
+-----------------------------------------------------------------------
 ### Data Cleaning Procedure
 Variables relevant to the questions were included in the tidy data using the Select (Grolemund,Wickham, n.d) function - this allowed for focus on the variables relevant to the questions posed. 
 
